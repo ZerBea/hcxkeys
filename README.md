@@ -41,6 +41,8 @@ Requirements
 
 * Linux (recommended Arch, but other distros should work, too)
 
+* OpenCL and OpenCL Headers installed
+
 * libopenssl and openssl-dev installed
 
 * librt and librt-dev installed (should be installed by default)
