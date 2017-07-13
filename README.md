@@ -21,7 +21,7 @@ Detailed description
 | Tool           | Description                                                                                          |
 | -------------- | ---------------------------------------------------------------------------------------------------- |
 | wlangenpmk     | Generates plainmasterkey from essid and password (CPU)                                               |
-| wlangenpmkocl  | Generates plainmasterkey from essid and password (GPU)                                               |
+| wlangenpmkocl  | Generates plainmasterkey from essid and password (GPU)    high experimental                          |
 | pwhash         | Generate hash of a word by using a given charset                                                     |
 
 
