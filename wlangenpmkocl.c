@@ -56,14 +56,18 @@ typedef struct cow_head cow_head_t;
 /*===========================================================================*/
 /* globale Variablen */
 
-uint8_t progende = FALSE;
+cl_uint platformCount;
+cl_platform_id *platforms = NULL;
+cl_uint deviceCount;
+cl_device_id *devices = NULL;
 
 cl_int ret;
-cl_device_id device_id = NULL;   
 cl_context context;
 cl_command_queue command_queue;
 cl_kernel kernel;
 size_t workgroupsize;
+
+uint8_t progende = FALSE;
 
 uint8_t essidlen = 0;
 char *essidname = NULL;
@@ -620,106 +624,13 @@ printf("\r%ld plainmasterkeys generated, %ld password(s) skipped\n", pmkcount, s
 return;
 }
 /*===========================================================================*/
-int initopencl()
+int initopencl(unsigned int p, unsigned int d)
 {
-cl_platform_id platform_id = NULL;
-cl_uint ret_num_devices;
-cl_uint ret_num_platforms;
+unsigned int pc;
 cl_program program;
 
 char *devicename;
 size_t devicenamesize;
-
-ret = clGetPlatformIDs(1, &platform_id, &ret_num_platforms);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
-	}
-
-ret = clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_DEFAULT, 1, &device_id, &ret_num_devices);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
-	}
-
-ret = clGetDeviceInfo(device_id, CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(workgroupsize), &workgroupsize, NULL);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
-	}
-
-ret = clGetDeviceInfo(device_id, CL_DEVICE_NAME, 0, NULL, &devicenamesize);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
-	}
-
-devicename = (char*) malloc(devicenamesize);
-ret = clGetDeviceInfo(device_id, CL_DEVICE_NAME, devicenamesize, devicename, NULL);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
-	}
-printf("using: %s\n", devicename);
-free(devicename);
-
-context = clCreateContext( NULL, 1, &device_id, NULL, NULL, &ret);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
-	}
-
-command_queue = clCreateCommandQueue(context, device_id, 0, &ret);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
-	}
-program = clCreateProgramWithSource(context, 1, (const char **) &kerneldata, NULL, &ret);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
-	}
-
-ret = clBuildProgram(program, 1, &device_id, NULL, NULL, NULL);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-    size_t len;
-    char buffer[62048];
-    printf("Error: Failed to build program executable!\n");
-    clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
-    printf("%s\n", buffer);
-    exit(1);
-	return FALSE;
-	}
-
-kernel = clCreateKernel(program, "opencl_pmk_kernel", &ret);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
-	}
-return TRUE;
-}
-/*===========================================================================*/
-int listdevices()
-{
-unsigned int i, j;
-char* value;
-size_t valueSize;
-
-cl_uint platformCount;
-cl_platform_id *platforms;
-cl_uint deviceCount;
-cl_device_id *devices;
 
 ret = clGetPlatformIDs(0, NULL, &platformCount);
 if (ret != CL_SUCCESS)
@@ -736,9 +647,13 @@ if (ret != CL_SUCCESS)
 	printf("OpenCL Error %s\n", getCLresultMsg(ret));
 	return FALSE;
 	}
-for (i = 0; i < platformCount; i++)
+
+if(p >= platformCount)
+	return FALSE;
+
+for (pc = 0; pc < platformCount; pc++)
 	{
-	ret = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_ALL, 0, NULL, &deviceCount);
+	ret = clGetDeviceIDs(platforms[pc], CL_DEVICE_TYPE_ALL, 0, NULL, &deviceCount);
 	if (ret != CL_SUCCESS)
 		{
 		printf("OpenCL Error %s\n\n", getCLresultMsg(ret));
@@ -746,25 +661,135 @@ for (i = 0; i < platformCount; i++)
 		}
 
 	devices = (cl_device_id*) malloc(sizeof(cl_device_id) * deviceCount);
-	ret = clGetDeviceIDs(platforms[i], CL_DEVICE_TYPE_ALL, deviceCount, devices, NULL);
+	ret = clGetDeviceIDs(platforms[pc], CL_DEVICE_TYPE_ALL, deviceCount, devices, NULL);
 	if (ret != CL_SUCCESS)
 		{
 		printf("OpenCL Error %s\n", getCLresultMsg(ret));
 		return FALSE;
 		}
-	for (j = 0; j < deviceCount; j++)
-		{
-		clGetDeviceInfo(devices[j], CL_DEVICE_NAME, 0, NULL, &valueSize);
-		value = (char*) malloc(valueSize);
-		clGetDeviceInfo(devices[j], CL_DEVICE_NAME, valueSize, value, NULL);
-		printf("%2d. Device: %s\n", j +1, value);
-		free(value);
+	}
 
-		clGetDeviceInfo(devices[j], CL_DEVICE_OPENCL_C_VERSION, 0, NULL, &valueSize);
-		value = (char*) malloc(valueSize);
-		clGetDeviceInfo(devices[j], CL_DEVICE_OPENCL_C_VERSION, valueSize, value, NULL);
-		printf("    OpenCL C version: %s\n", value);
-		free(value);
+if(d >= deviceCount)
+	return FALSE;
+
+ret = clGetDeviceInfo(devices[d], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(workgroupsize), &workgroupsize, NULL);
+if (ret != CL_SUCCESS)
+	{
+	printf("OpenCL Error %s\n", getCLresultMsg(ret));
+	return FALSE;
+	}
+
+ret = clGetDeviceInfo(devices[d], CL_DEVICE_NAME, 0, NULL, &devicenamesize);
+if (ret != CL_SUCCESS)
+	{
+	printf("OpenCL Error %s\n", getCLresultMsg(ret));
+	return FALSE;
+	}
+
+devicename = (char*) malloc(devicenamesize);
+ret = clGetDeviceInfo(devices[d], CL_DEVICE_NAME, devicenamesize, devicename, NULL);
+if (ret != CL_SUCCESS)
+	{
+	printf("OpenCL Error %s\n", getCLresultMsg(ret));
+	return FALSE;
+	}
+printf("using: %s\n", devicename);
+free(devicename);
+
+context = clCreateContext( NULL, 1, &devices[d], NULL, NULL, &ret);
+if (ret != CL_SUCCESS)
+	{
+	printf("OpenCL Error %s\n", getCLresultMsg(ret));
+	return FALSE;
+	}
+
+command_queue = clCreateCommandQueue(context, devices[d], 0, &ret);
+if (ret != CL_SUCCESS)
+	{
+	printf("OpenCL Error %s\n", getCLresultMsg(ret));
+	return FALSE;
+	}
+program = clCreateProgramWithSource(context, 1, (const char **) &kerneldata, NULL, &ret);
+if (ret != CL_SUCCESS)
+	{
+	printf("OpenCL Error %s\n", getCLresultMsg(ret));
+	return FALSE;
+	}
+
+ret = clBuildProgram(program, 1, &devices[d], NULL, NULL, NULL);
+if (ret != CL_SUCCESS)
+	{
+	printf("OpenCL Error %s\n", getCLresultMsg(ret));
+    size_t len;
+    char buffer[62048];
+    printf("Error: Failed to build program executable!\n");
+    clGetProgramBuildInfo(program, devices[d], CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
+    printf("%s\n", buffer);
+    exit(1);
+	return FALSE;
+	}
+
+kernel = clCreateKernel(program, "opencl_pmk_kernel", &ret);
+if (ret != CL_SUCCESS)
+	{
+	printf("OpenCL Error %s\n", getCLresultMsg(ret));
+	return FALSE;
+	}
+return TRUE;
+}
+/*===========================================================================*/
+int listdevices()
+{
+unsigned int p, d;
+char* value1;
+char* value2;
+size_t valueSize;
+
+
+ret = clGetPlatformIDs(0, NULL, &platformCount);
+if (ret != CL_SUCCESS)
+	{
+	printf("OpenCL Error %s\n", getCLresultMsg(ret));
+	return FALSE;
+	}
+
+platforms = (cl_platform_id*) malloc(sizeof(cl_platform_id) * platformCount);
+
+ret = clGetPlatformIDs(platformCount, platforms, NULL);
+if (ret != CL_SUCCESS)
+	{
+	printf("OpenCL Error %s\n", getCLresultMsg(ret));
+	return FALSE;
+	}
+
+for (p = 0; p < platformCount; p++)
+	{
+	ret = clGetDeviceIDs(platforms[p], CL_DEVICE_TYPE_ALL, 0, NULL, &deviceCount);
+	if (ret != CL_SUCCESS)
+		{
+		printf("OpenCL Error %s\n\n", getCLresultMsg(ret));
+		return FALSE;
+		}
+
+	devices = (cl_device_id*) malloc(sizeof(cl_device_id) * deviceCount);
+	ret = clGetDeviceIDs(platforms[p], CL_DEVICE_TYPE_ALL, deviceCount, devices, NULL);
+	if (ret != CL_SUCCESS)
+		{
+		printf("OpenCL Error %s\n", getCLresultMsg(ret));
+		return FALSE;
+		}
+	for (d = 0; d < deviceCount; d++)
+		{
+		clGetDeviceInfo(devices[d], CL_DEVICE_NAME, 0, NULL, &valueSize);
+		value1 = (char*) malloc(valueSize);
+		clGetDeviceInfo(devices[d], CL_DEVICE_NAME, valueSize, value1, NULL);
+
+		clGetDeviceInfo(devices[d], CL_DEVICE_OPENCL_C_VERSION, 0, NULL, &valueSize);
+		value2 = (char*) malloc(valueSize);
+		clGetDeviceInfo(devices[d], CL_DEVICE_OPENCL_C_VERSION, valueSize, value2, NULL);
+		printf("%s, %s  for this device use options -P %d -D %d\n", value1, value2, p, d);
+		free(value2);
+		free(value1);
 		}
 	free(devices);
 	}
@@ -811,6 +836,8 @@ printf("%s %s (C) %s ZeroBeat\n"
 	"-a <file>     : output plainmasterkeys as ASCII file (hashcat -m 2501)\n"
 	"-A <file>     : output plainmasterkeys:password as ASCII file\n"
 	"-c <file>     : output cowpatty hashfile (existing file will be replaced)\n"
+	"-P <platform> : input platform, default 0 (first platform)\n"
+	"-D <device>   : input platform, default 0 (first device)\n"
 	"-l            : list device info\n"
 	"-h            : this help\n"
 	"\n", eigenname, VERSION, VERSION_JAHR, eigenname);
@@ -821,6 +848,8 @@ int main(int argc, char *argv[])
 {
 FILE *fhpwlist = NULL;
 int auswahl;
+unsigned int p = 0;
+unsigned int d = 0;
 
 int pwlen = 0;
 int listdeviceinfo = FALSE;
@@ -833,7 +862,7 @@ eigenpfadname = strdupa(argv[0]);
 eigenname = basename(eigenpfadname);
 
 setbuf(stdout, NULL);
-while ((auswahl = getopt(argc, argv, "p:e:i:a:A:c:lh")) != -1)
+while ((auswahl = getopt(argc, argv, "p:e:i:a:A:c:P:D:lh")) != -1)
 	{
 	switch (auswahl)
 		{
@@ -889,6 +918,14 @@ while ((auswahl = getopt(argc, argv, "p:e:i:a:A:c:lh")) != -1)
 			}
 		break;
 
+		case 'P':
+		p = atoi(optarg);
+		break;
+
+		case 'D':
+		d = atoi(optarg);
+		break;
+
 		case 'l':
 		listdeviceinfo = TRUE;
 		break;
@@ -904,16 +941,30 @@ while ((auswahl = getopt(argc, argv, "p:e:i:a:A:c:lh")) != -1)
 	}
 
 if(listdeviceinfo == TRUE)
-	listdevices();
+	{
+	if(listdevices() != TRUE)
+		exit(EXIT_FAILURE);
+	return EXIT_SUCCESS;
+	}
 
 else if((essidname != NULL) && (pwname != NULL))
+	{
 	singlepmkout(pwname, pwlen);
+	return EXIT_SUCCESS;
+	}
+
 
 else if(essidname != NULL)
 	{
-	if(initopencl() == TRUE)
+	if(initopencl(p, d) == TRUE)
 		processpasswords(fhpwlist);
 	}
+
+if(devices != NULL)
+	free(devices);
+
+if(platforms != NULL)
+free(platforms);
 
 
 if(fhpwlist != NULL)
