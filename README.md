@@ -1,4 +1,4 @@
-hcxtools
+hcxkeys
 ==============
 
 Small set of tools to generate hashes and keys for the use with
