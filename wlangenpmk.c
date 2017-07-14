@@ -274,7 +274,7 @@ FILE *fhpwlist = NULL;
 FILE *fhascii = NULL;
 FILE *fhasciipw = NULL;
 FILE *fhcow = NULL;
-FILE *fhpot = NULL;
+FILE *fhcombi = NULL;
 int auswahl;
 
 int pwlen = 0;
@@ -323,7 +323,7 @@ while ((auswahl = getopt(argc, argv, "p:e:i:I:a:A:c:h")) != -1)
 		break;
 
 		case 'I':
-		if((fhpot = fopen(optarg, "r")) == NULL)
+		if((fhcombi = fopen(optarg, "r")) == NULL)
 			{
 			fprintf(stderr, "error opening %s\n", optarg);
 			exit(EXIT_FAILURE);
@@ -370,11 +370,11 @@ if((essidname != NULL) && (pwname != NULL))
 else if(essidname != NULL)
 	filepmkout(fhpwlist, fhascii, fhasciipw, fhcow, essidname, essidlen);
 
-else if((fhpot != NULL) && (fhascii != NULL))
-	filecombiout(fhpot, fhascii);
+else if((fhcombi != NULL) && (fhascii != NULL))
+	filecombiout(fhcombi, fhascii);
 
-if(fhpot != NULL)
-	fclose(fhpot);
+if(fhcombi != NULL)
+	fclose(fhcombi);
 
 if(fhpwlist != NULL)
 	fclose(fhpwlist);

@@ -570,6 +570,74 @@ len = chop(buffptr, len);
 return len;
 }
 /*===========================================================================*/
+void filecombiout(FILE *fhcombi)
+{
+int c;
+char *ptr1 = NULL;
+int combilen;
+int pwlen;
+long int pmkcount = 0;
+long int skippedcount = 0;
+
+char combiline[100];
+
+signal(SIGINT, programmende);
+c = 0;
+while((progende != TRUE) && ((combilen = fgetline(fhcombi, 100, combiline)) != -1))
+	{
+	if(combilen < 10)
+		{
+		skippedcount++;
+		continue;
+		}
+
+	essidname = combiline;
+	ptr1 = strchr(combiline, ':');
+	if(ptr1 == NULL)
+		{
+		skippedcount++;
+		continue;
+		}
+
+	ptr1[0] = 0;
+	ptr1++;
+	essidlen = strlen(essidname);
+	if((essidlen < 1) || (essidlen > 32))
+		{
+		skippedcount++;
+		continue;
+		}
+
+	pwlen = strlen(ptr1);
+	if((pwlen < 8) || (pwlen > 63))
+		{
+		skippedcount++;
+		continue;
+		}
+
+	memset(&password[c][0], 0, 64);
+	memcpy(&password[c][0], ptr1, pwlen);
+
+	precalc(&inbuffer[c], pwlen, &password[c][0]);
+	c++;
+	pmkcount++;
+	if(c >= LISTSIZE)
+		{
+		finalcalc(c);
+		c = 0;
+		}
+	if((pmkcount % 1000) == 0)
+		printf("\r%ld plainmasterkeys generated", pmkcount);
+	}	
+
+if(c != 0)
+	finalcalc(c);
+
+printf("\r%ld plainmasterkeys generated, %ld password(s) skipped\n", pmkcount, skippedcount);
+
+return;
+}
+/*===========================================================================*/
 void processpasswords(FILE *fhpwlist)
 {
 int pwlen;
@@ -624,7 +692,7 @@ printf("\r%ld plainmasterkeys generated, %ld password(s) skipped\n", pmkcount, s
 return;
 }
 /*===========================================================================*/
-int initopencl(unsigned int p, unsigned int d)
+int initopencl(unsigned int gplfc, unsigned int gdevc)
 {
 unsigned int pc;
 cl_program program;
@@ -648,7 +716,7 @@ if (ret != CL_SUCCESS)
 	return FALSE;
 	}
 
-if(p >= platformCount)
+if(gplfc >= platformCount)
 	return FALSE;
 
 for (pc = 0; pc < platformCount; pc++)
@@ -669,17 +737,17 @@ for (pc = 0; pc < platformCount; pc++)
 		}
 	}
 
-if(d >= deviceCount)
+if(gdevc >= deviceCount)
 	return FALSE;
 
-ret = clGetDeviceInfo(devices[d], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(workgroupsize), &workgroupsize, NULL);
+ret = clGetDeviceInfo(devices[gdevc], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(workgroupsize), &workgroupsize, NULL);
 if (ret != CL_SUCCESS)
 	{
 	printf("OpenCL Error %s\n", getCLresultMsg(ret));
 	return FALSE;
 	}
 
-ret = clGetDeviceInfo(devices[d], CL_DEVICE_NAME, 0, NULL, &devicenamesize);
+ret = clGetDeviceInfo(devices[gdevc], CL_DEVICE_NAME, 0, NULL, &devicenamesize);
 if (ret != CL_SUCCESS)
 	{
 	printf("OpenCL Error %s\n", getCLresultMsg(ret));
@@ -687,7 +755,7 @@ if (ret != CL_SUCCESS)
 	}
 
 devicename = (char*) malloc(devicenamesize);
-ret = clGetDeviceInfo(devices[d], CL_DEVICE_NAME, devicenamesize, devicename, NULL);
+ret = clGetDeviceInfo(devices[gdevc], CL_DEVICE_NAME, devicenamesize, devicename, NULL);
 if (ret != CL_SUCCESS)
 	{
 	printf("OpenCL Error %s\n", getCLresultMsg(ret));
@@ -696,14 +764,14 @@ if (ret != CL_SUCCESS)
 printf("using: %s\n", devicename);
 free(devicename);
 
-context = clCreateContext( NULL, 1, &devices[d], NULL, NULL, &ret);
+context = clCreateContext( NULL, 1, &devices[gdevc], NULL, NULL, &ret);
 if (ret != CL_SUCCESS)
 	{
 	printf("OpenCL Error %s\n", getCLresultMsg(ret));
 	return FALSE;
 	}
 
-command_queue = clCreateCommandQueue(context, devices[d], 0, &ret);
+command_queue = clCreateCommandQueue(context, devices[gdevc], 0, &ret);
 if (ret != CL_SUCCESS)
 	{
 	printf("OpenCL Error %s\n", getCLresultMsg(ret));
@@ -716,14 +784,14 @@ if (ret != CL_SUCCESS)
 	return FALSE;
 	}
 
-ret = clBuildProgram(program, 1, &devices[d], NULL, NULL, NULL);
+ret = clBuildProgram(program, 1, &devices[gdevc], NULL, NULL, NULL);
 if (ret != CL_SUCCESS)
 	{
 	printf("OpenCL Error %s\n", getCLresultMsg(ret));
     size_t len;
     char buffer[62048];
     printf("Error: Failed to build program executable!\n");
-    clGetProgramBuildInfo(program, devices[d], CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
+    clGetProgramBuildInfo(program, devices[gdevc], CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
     printf("%s\n", buffer);
     exit(1);
 	return FALSE;
@@ -833,6 +901,7 @@ printf("%s %s (C) %s ZeroBeat\n"
 	"-e <essid>    : input single essid (networkname: 1 .. 32 characters)\n"
 	"-p <password> : input single password (8 .. 63 characters)\n"
 	"-i <file>     : input passwordlist\n"
+	"-I <file>     : input combilist (essid:password)\n"
 	"-a <file>     : output plainmasterkeys as ASCII file (hashcat -m 2501)\n"
 	"-A <file>     : output plainmasterkeys:password as ASCII file\n"
 	"-c <file>     : output cowpatty hashfile (existing file will be replaced)\n"
@@ -847,9 +916,10 @@ exit(EXIT_FAILURE);
 int main(int argc, char *argv[])
 {
 FILE *fhpwlist = NULL;
+FILE *fhcombi = NULL;
 int auswahl;
-unsigned int p = 0;
-unsigned int d = 0;
+unsigned int gplfc = 0;
+unsigned int gdevc= 0;
 
 int pwlen = 0;
 int listdeviceinfo = FALSE;
@@ -862,7 +932,7 @@ eigenpfadname = strdupa(argv[0]);
 eigenname = basename(eigenpfadname);
 
 setbuf(stdout, NULL);
-while ((auswahl = getopt(argc, argv, "p:e:i:a:A:c:P:D:lh")) != -1)
+while ((auswahl = getopt(argc, argv, "p:e:i:I:a:A:c:P:D:lh")) != -1)
 	{
 	switch (auswahl)
 		{
@@ -894,6 +964,14 @@ while ((auswahl = getopt(argc, argv, "p:e:i:a:A:c:P:D:lh")) != -1)
 			}
 		break;
 
+		case 'I':
+		if((fhcombi = fopen(optarg, "r")) == NULL)
+			{
+			fprintf(stderr, "error opening %s\n", optarg);
+			exit(EXIT_FAILURE);
+			}
+		break;
+
 		case 'a':
 		if((fhascii = fopen(optarg, "a")) == NULL)
 			{
@@ -919,11 +997,11 @@ while ((auswahl = getopt(argc, argv, "p:e:i:a:A:c:P:D:lh")) != -1)
 		break;
 
 		case 'P':
-		p = atoi(optarg);
+		gplfc = atoi(optarg);
 		break;
 
 		case 'D':
-		d = atoi(optarg);
+		gdevc = atoi(optarg);
 		break;
 
 		case 'l':
@@ -947,17 +1025,27 @@ if(listdeviceinfo == TRUE)
 	return EXIT_SUCCESS;
 	}
 
-else if((essidname != NULL) && (pwname != NULL))
+if(initopencl(gplfc, gdevc) != TRUE)
+	{
+	fprintf(stderr, "couldn't initialize devices\n");
+	exit(EXIT_FAILURE);
+	}
+
+
+if((essidname != NULL) && (pwname != NULL))
 	{
 	singlepmkout(pwname, pwlen);
 	return EXIT_SUCCESS;
 	}
 
-
 else if(essidname != NULL)
 	{
-	if(initopencl(p, d) == TRUE)
-		processpasswords(fhpwlist);
+	processpasswords(fhpwlist);
+	}
+
+else if((fhcombi != NULL) && (fhascii != NULL))
+	{
+	filecombiout(fhcombi);
 	}
 
 if(devices != NULL)
@@ -966,6 +1054,8 @@ if(devices != NULL)
 if(platforms != NULL)
 free(platforms);
 
+if(fhcombi != NULL)
+	fclose(fhcombi);
 
 if(fhpwlist != NULL)
 	fclose(fhpwlist);
