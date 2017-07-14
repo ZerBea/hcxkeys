@@ -25,7 +25,6 @@ struct cow_head
 typedef struct cow_head cow_head_t;
 #define	COWHEAD_SIZE (sizeof(cow_head_t))
 
-
 /*===========================================================================*/
 /* globale Variablen */
 
@@ -74,6 +73,73 @@ if(buffptr == NULL)
 size_t len = strlen(buffptr);
 len = chop(buffptr, len);
 return len;
+}
+/*===========================================================================*/
+void filecombiout(FILE *fhcombi, FILE *fhascii)
+{
+int c;
+char *ptr1 = NULL;
+char *ptr2 = NULL;
+int combilen;
+int saltlen;
+int pwlen;
+long int pmkcount = 0;
+long int skippedcount = 0;
+
+char combiline[100];
+unsigned char salt[34];
+char password[64];
+unsigned char pmk[64];
+
+signal(SIGINT, programmende);
+while((progende != TRUE) && ((combilen = fgetline(fhcombi, 100, combiline)) != -1))
+	{
+	if(combilen < 10)
+		{
+		skippedcount++;
+		continue;
+		}
+
+	ptr1 = combiline;
+	ptr2 = strchr(ptr1, ':') +1;
+	pwlen = strlen(ptr2);
+	if((pwlen < 8) || (pwlen > 63))
+		{
+		skippedcount++;
+		continue;
+		}
+	memset(&password, 0, 64);
+	memcpy(&password, ptr2, pwlen);
+
+	saltlen = strlen(ptr1);
+	if(saltlen < 3)
+		{
+		skippedcount++;
+		continue;
+		}
+	saltlen -= pwlen +1;
+	if((saltlen < 1) || (saltlen > 32))
+		{
+		skippedcount++;
+		continue;
+		}
+
+	memset(&salt, 0, 34);
+	memcpy(&salt, ptr1, saltlen);
+
+	if( PKCS5_PBKDF2_HMAC_SHA1(password, pwlen, salt, saltlen, 4096, 32, pmk) != 0 )
+		{
+		for(c = 0; c< 32; c++)
+			fprintf(fhascii, "%02x", pmk[c]);
+		fprintf(fhascii, "\n");
+		pmkcount++;
+		if((pmkcount %1000) == 0)
+			printf("\r%ld", pmkcount);
+		}
+	}
+
+printf("\r%ld plainmasterkeys generated, %ld password(s) skipped\n", pmkcount, skippedcount);
+return;
 }
 /*===========================================================================*/
 void filepmkout(FILE *pwlist, FILE *fhascii,  FILE *fhasciipw, FILE *fhcow, char *essidname, uint8_t essidlen)
@@ -193,6 +259,7 @@ printf("%s %s (C) %s ZeroBeat\n"
 	"-e <essid>    : input single essid (networkname: 1 .. 32 characters)\n"
 	"-p <password> : input single password (8 .. 63 characters)\n"
 	"-i <file>     : input passwordlist\n"
+	"-I <file>     : input combilist (essid:password)\n"
 	"-a <file>     : output plainmasterkeys as ASCII file (hashcat -m 2501)\n"
 	"-A <file>     : output plainmasterkeys:password as ASCII file\n"
 	"-c <file>     : output cowpatty hashfile (existing file will be replaced)\n"
@@ -207,6 +274,7 @@ FILE *fhpwlist = NULL;
 FILE *fhascii = NULL;
 FILE *fhasciipw = NULL;
 FILE *fhcow = NULL;
+FILE *fhpot = NULL;
 int auswahl;
 
 int pwlen = 0;
@@ -218,12 +286,11 @@ char *pwname = NULL;
 char *essidname = NULL;
 
 
-
 eigenpfadname = strdupa(argv[0]);
 eigenname = basename(eigenpfadname);
 
 setbuf(stdout, NULL);
-while ((auswahl = getopt(argc, argv, "p:e:i:a:A:c:h")) != -1)
+while ((auswahl = getopt(argc, argv, "p:e:i:I:a:A:c:h")) != -1)
 	{
 	switch (auswahl)
 		{
@@ -249,6 +316,14 @@ while ((auswahl = getopt(argc, argv, "p:e:i:a:A:c:h")) != -1)
 
 		case 'i':
 		if((fhpwlist = fopen(optarg, "r")) == NULL)
+			{
+			fprintf(stderr, "error opening %s\n", optarg);
+			exit(EXIT_FAILURE);
+			}
+		break;
+
+		case 'I':
+		if((fhpot = fopen(optarg, "r")) == NULL)
 			{
 			fprintf(stderr, "error opening %s\n", optarg);
 			exit(EXIT_FAILURE);
@@ -295,7 +370,11 @@ if((essidname != NULL) && (pwname != NULL))
 else if(essidname != NULL)
 	filepmkout(fhpwlist, fhascii, fhasciipw, fhcow, essidname, essidlen);
 
+else if((fhpot != NULL) && (fhascii != NULL))
+	filecombiout(fhpot, fhascii);
 
+if(fhpot != NULL)
+	fclose(fhpot);
 
 if(fhpwlist != NULL)
 	fclose(fhpwlist);
