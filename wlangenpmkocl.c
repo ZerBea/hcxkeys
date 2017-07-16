@@ -576,12 +576,29 @@ int c;
 char *ptr1 = NULL;
 int combilen;
 int pwlen;
+int cr;
+cow_head_t cow;
 long int pmkcount = 0;
 long int skippedcount = 0;
 
 char combiline[100];
 
 signal(SIGINT, programmende);
+if(fhcow != NULL)
+	{
+	memset(&cow, 0, COWHEAD_SIZE);
+	cow.magic = COWPATTY_SIGNATURE;
+	memset(&cow.essid, 0,32);
+	cow.essidlen = 0;
+	cow.reserved1[2] = 1;
+	cr = fwrite(&cow, COWHEAD_SIZE, 1, fhcow);
+	if(cr != 1)
+		{
+		fprintf(stderr, "error writing cowpatty file\n");
+		exit(EXIT_FAILURE);
+		}
+	}
+
 c = 0;
 while((progende != TRUE) && ((combilen = fgetline(fhcombi, 100, combiline)) != -1))
 	{
@@ -648,7 +665,6 @@ long int skippedcount = 0;
 cow_head_t cow;
 
 signal(SIGINT, programmende);
-
 if((fhcow != NULL) && (essidname != NULL))
 	{
 	memset(&cow, 0, COWHEAD_SIZE);
@@ -1038,12 +1054,12 @@ if((essidname != NULL) && (pwname != NULL))
 	return EXIT_SUCCESS;
 	}
 
-else if(essidname != NULL)
+else if((essidname != NULL) && (fhpwlist != NULL))
 	{
 	processpasswords(fhpwlist);
 	}
 
-else if((fhcombi != NULL) && (fhascii != NULL))
+else if(fhcombi != NULL)
 	{
 	filecombiout(fhcombi);
 	}

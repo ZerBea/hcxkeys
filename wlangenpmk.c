@@ -75,7 +75,7 @@ len = chop(buffptr, len);
 return len;
 }
 /*===========================================================================*/
-void filecombiout(FILE *fhcombi, FILE *fhascii)
+void filecombiout(FILE *fhcombi, FILE *fhascii, FILE *fhasciipw, FILE *fhcow)
 {
 int c;
 char *ptr1 = NULL;
@@ -83,6 +83,9 @@ char *ptr2 = NULL;
 int combilen;
 int saltlen;
 int pwlen;
+int cr;
+cow_head_t cow;
+uint8_t cowreclen = 0;
 long int pmkcount = 0;
 long int skippedcount = 0;
 
@@ -92,6 +95,22 @@ char password[64];
 unsigned char pmk[64];
 
 signal(SIGINT, programmende);
+
+if(fhcow != NULL)
+	{
+	memset(&cow, 0, COWHEAD_SIZE);
+	cow.magic = COWPATTY_SIGNATURE;
+	memset(&cow.essid, 0, 32);
+	cow.essidlen = 0;
+	cow.reserved1[2] = 1;
+	cr = fwrite(&cow, COWHEAD_SIZE, 1, fhcow);
+	if(cr != 1)
+		{
+		fprintf(stderr, "error writing cowpatty file\n");
+		exit(EXIT_FAILURE);
+		}
+	}
+
 while((progende != TRUE) && ((combilen = fgetline(fhcombi, 100, combiline)) != -1))
 	{
 	if(combilen < 10)
@@ -129,9 +148,39 @@ while((progende != TRUE) && ((combilen = fgetline(fhcombi, 100, combiline)) != -
 
 	if( PKCS5_PBKDF2_HMAC_SHA1(password, pwlen, salt, saltlen, 4096, 32, pmk) != 0 )
 		{
+		if(fhcow != NULL)
+			{
+			cowreclen = sizeof(cowreclen) + pwlen + 32;
+			cr = fwrite(&cowreclen, sizeof(cowreclen), 1, fhcow);
+			if(cr != 1)
+				{
+				fprintf(stderr, "error writing cowpatty file\n");
+				exit(EXIT_FAILURE);
+				}
+			fprintf(fhcow, "%s", password);
+			cr = fwrite(&pmk, sizeof(uint8_t), 32, fhcow);
+			if(cr != 32)
+				{
+				fprintf(stderr, "error writing cowpatty file\n");
+				exit(EXIT_FAILURE);
+				}
+			}
 		for(c = 0; c< 32; c++)
-			fprintf(fhascii, "%02x", pmk[c]);
-		fprintf(fhascii, "\n");
+			{
+			if(fhascii != NULL)
+				fprintf(fhascii, "%02x", pmk[c]);
+
+			if(fhasciipw != NULL)
+				fprintf(fhasciipw, "%02x", pmk[c]);
+			}
+		if(fhascii != NULL)
+			fprintf(fhascii, "\n");
+
+		if(fhasciipw != NULL)
+			fprintf(fhasciipw, ":%s\n", password);
+
+
+
 		pmkcount++;
 		if((pmkcount %1000) == 0)
 			printf("\r%ld", pmkcount);
@@ -182,9 +231,9 @@ while((progende != TRUE) && ((pwlen = fgetline(pwlist, 64, password)) != -1))
 
 	if( PKCS5_PBKDF2_HMAC_SHA1(password, pwlen, salt, essidlen, 4096, 32, pmk) != 0 )
 		{
-		cowreclen = sizeof(cowreclen) + pwlen + 32;
 		if(fhcow != NULL)
 			{
+			cowreclen = sizeof(cowreclen) + pwlen + 32;
 			cr = fwrite(&cowreclen, sizeof(cowreclen), 1, fhcow);
 			if(cr != 1)
 				{
@@ -367,11 +416,11 @@ while ((auswahl = getopt(argc, argv, "p:e:i:I:a:A:c:h")) != -1)
 if((essidname != NULL) && (pwname != NULL))
 	singlepmkout(pwname, pwlen, essidname, essidlen);
 
-else if(essidname != NULL)
+else if((essidname != NULL) && (fhpwlist != NULL))
 	filepmkout(fhpwlist, fhascii, fhasciipw, fhcow, essidname, essidlen);
 
-else if((fhcombi != NULL) && (fhascii != NULL))
-	filecombiout(fhcombi, fhascii);
+else if(fhcombi != NULL)
+	filecombiout(fhcombi, fhascii, fhasciipw, fhcow);
 
 if(fhcombi != NULL)
 	fclose(fhcombi);
