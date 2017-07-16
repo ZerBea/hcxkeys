@@ -1,10 +1,10 @@
 hcxkeys
 ==============
 
-Small set of tools to generate hashes and keys for the use with
-latest hashcat. The tools are 100% compatible to hashcat
-and recommended by hashcat (that means hcxtools 3.6.0 working with
-hashcat 3.6.0).
+Small set of tools to generate plainmasterkeys (rainbowtables) and hashes
+for the use with latest hashcat. The tools are 100% compatible to hashcat
+and recommended by hashcat (that means hcxkeys 3.6.0 working with
+hacxtools 3.6.0 and hashcat 3.6.0).
 
 
 Brief description
@@ -20,8 +20,8 @@ Detailed description
 
 | Tool           | Description                                                                                          |
 | -------------- | ---------------------------------------------------------------------------------------------------- |
-| wlangenpmk     | Generates plainmasterkey from essid and password (CPU)                                               |
-| wlangenpmkocl  | Generates plainmasterkey from essid and password (GPU)    high experimental                          |
+| wlangenpmk     | Generates plainmasterkeys (CPU) from essid and password for use with hashcat hash-mode 2501          |
+| wlangenpmkocl  | Generates plainmasterkeys (GPU) from essid and password for use with hashcat hash-mode 2501          |
 | pwhash         | Generate hash of a word by using a given charset                                                     |
 
 
