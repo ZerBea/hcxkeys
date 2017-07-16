@@ -922,7 +922,7 @@ printf("%s %s (C) %s ZeroBeat\n"
 	"-A <file>     : output plainmasterkeys:password as ASCII file\n"
 	"-c <file>     : output cowpatty hashfile (existing file will be replaced)\n"
 	"-P <platform> : input platform, default 0 (first platform)\n"
-	"-D <device>   : input platform, default 0 (first device)\n"
+	"-D <device>   : input device, default 0 (first device)\n"
 	"-l            : list device info\n"
 	"-h            : this help\n"
 	"\n", eigenname, VERSION, VERSION_JAHR, eigenname);
