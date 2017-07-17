@@ -22,22 +22,23 @@
 #include <openssl/buffer.h>
 
 /*===========================================================================*/
-char *base64(const unsigned char *input, int len)
+void base64(const unsigned char* buffer, size_t length, char** b64text)
 {
-BIO *bmem, *b64;
-BUF_MEM *bptr;
+BIO *bio, *b64;
+BUF_MEM *bufferPtr;
+
 b64 = BIO_new(BIO_f_base64());
-bmem = BIO_new(BIO_s_mem());
-b64 = BIO_push(b64, bmem);
-BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
-BIO_write(b64, input, len);
-BIO_flush(b64);
-BIO_get_mem_ptr(b64, &bptr);
-char *buff = (char *)malloc(bptr->length);
-memcpy(buff, bptr->data, bptr->length-1);
-buff[bptr->length-1] = 0;
-BIO_free_all(b64);
-return buff;
+bio = BIO_new(BIO_s_mem());
+bio = BIO_push(b64, bio);
+
+BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL);
+BIO_write(bio, buffer, length);
+BIO_flush(bio);
+BIO_get_mem_ptr(bio, &bufferPtr);
+BIO_set_close(bio, BIO_NOCLOSE);
+BIO_free_all(bio);
+*b64text=(*bufferPtr).data;
+return;
 }
 /*===========================================================================*/
 int main(int argc, char *argv[])
@@ -90,10 +91,10 @@ SHA512_Final(digestsha512, &ctxsha512);
 printf("\nsha512-hex....: ");
 for (p = 0; p < SHA512_DIGEST_LENGTH; p++)
 	{
-	printf("%02x",digestsha512[p]);
+	printf("%02x", digestsha512[p]);
 	}
 
-hashrecord = base64(digestsha512,SHA512_DIGEST_LENGTH);
+base64(digestsha512, SHA512_DIGEST_LENGTH, &hashrecord);
 printf("\nsha512-base64.: %s", hashrecord);
 free(hashrecord);
 
@@ -101,7 +102,7 @@ printf("\nsha512-ascii..: ");
 for (p = 0; p < SHA512_DIGEST_LENGTH; p++)
 	{
 	k = (digestsha512[p] %keysetlen);
-	printf("%c",keystring[k]);
+	printf("%c", keystring[k]);
 	}
 
 SHA256_Init(&ctxsha256);
@@ -111,10 +112,10 @@ SHA256_Final(digestsha256, &ctxsha256);
 printf("\nsha256-hex....: ");
 for (p = 0; p < SHA256_DIGEST_LENGTH; p++)
 	{
-	printf("%02x",digestsha256[p]);
+	printf("%02x", digestsha256[p]);
 	}
 
-hashrecord = base64(digestsha256,SHA256_DIGEST_LENGTH);
+base64(digestsha256,SHA256_DIGEST_LENGTH, &hashrecord);
 printf("\nsha256-base64.: %s", hashrecord);
 free(hashrecord);
 
@@ -122,7 +123,7 @@ printf("\nsha256-ascii..: ");
 for (p = 0; p < SHA256_DIGEST_LENGTH; p++)
 	{
 	k = (digestsha256[p] %keysetlen);
-	printf("%c",keystring[k]);
+	printf("%c", keystring[k]);
 	}
 
 SHA1_Init(&ctxsha1);
@@ -132,10 +133,10 @@ SHA1_Final(digestsha1, &ctxsha1);
 printf("\nsha1-hex......: ");
 for (p = 0; p < SHA_DIGEST_LENGTH; p++)
 	{
-	printf("%02x",digestsha1[p]);
+	printf("%02x", digestsha1[p]);
 	}
 
-hashrecord = base64(digestsha1,SHA_DIGEST_LENGTH);
+base64(digestsha1, SHA_DIGEST_LENGTH, &hashrecord);
 printf("\nsha1-base64...: %s", hashrecord);
 free(hashrecord);
 
@@ -143,7 +144,7 @@ printf("\nsha1-ascii....: ");
 for (p = 0; p < SHA_DIGEST_LENGTH; p++)
 	{
 	k = (digestsha1[p] %keysetlen);
-	printf("%c",keystring[k]);
+	printf("%c", keystring[k]);
 	}
 
 MD5_Init(&ctxmd5);
@@ -153,10 +154,10 @@ MD5_Final(digestmd5, &ctxmd5);
 printf("\nmd5-hex.......: ");
 for (p = 0; p < MD5_DIGEST_LENGTH; p++)
 	{
-	printf("%02x",digestmd5[p]);
+	printf("%02x", digestmd5[p]);
 	}
 
-hashrecord = base64(digestmd5,MD5_DIGEST_LENGTH);
+base64(digestmd5, MD5_DIGEST_LENGTH, &hashrecord);
 printf("\nsmd5-base64...: %s", hashrecord);
 free(hashrecord);
 
@@ -164,7 +165,7 @@ printf("\nmd5-ascii.....: ");
 for (p = 0; p < MD5_DIGEST_LENGTH; p++)
 	{
 	k = (digestmd5[p] %keysetlen);
-	printf("%c",keystring[k]);
+	printf("%c", keystring[k]);
 	}
 
 MD4_Init(&ctxmd4);
@@ -174,10 +175,10 @@ MD4_Final(digestmd4, &ctxmd4);
 printf("\nmd4-hex.......: ");
 for (p = 0; p < MD4_DIGEST_LENGTH; p++)
 	{
-	printf("%02x",digestmd4[p]);
+	printf("%02x", digestmd4[p]);
 	}
 
-hashrecord = base64(digestmd4,MD4_DIGEST_LENGTH);
+base64(digestmd4, MD4_DIGEST_LENGTH, &hashrecord);
 printf("\nmd4-base64....: %s", hashrecord);
 free(hashrecord);
 
@@ -185,7 +186,7 @@ printf("\nmd4-ascii.....: ");
 for (p = 0; p < MD4_DIGEST_LENGTH; p++)
 	{
 	k = (digestmd4[p] %keysetlen);
-	printf("%c",keystring[k]);
+	printf("%c", keystring[k]);
 	}
 
 
