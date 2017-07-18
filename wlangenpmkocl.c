@@ -885,26 +885,38 @@ void singlepmkout(char *pwname, int pwlen)
 {
 int c;
 
-char password[64];
-unsigned char essid[64];
-unsigned char pmk[64];
+unsigned char essid[32];
+unsigned char pmk1[64];
+unsigned char pmk256[64];
 
-memcpy(&password, pwname, pwlen);
+memset(&essid, 0, 32);
 memcpy(&essid, essidname, essidlen);
 
 fprintf(stdout, "\n"
-		"essid (networkname): %s\n"
-		"password...........: %s\n"
-		"plainmasterkey.....: "
+		"essid (networkname)....: %s\n"
+		"password...............: %s\n"
 		, essidname, pwname);
-if( PKCS5_PBKDF2_HMAC_SHA1(password, pwlen, essid, essidlen, 4096, 32, pmk) != 0 )
+
+
+if(PKCS5_PBKDF2_HMAC(pwname, pwlen, essid, essidlen, 4096, EVP_sha1(), 32, pmk1) != 0)
 	{
+	printf("plainmasterkey (SHA1)..: ");
 	for(c = 0; c< 32; c++)
 		{
-		fprintf(stdout, "%02x", pmk[c]);
+		printf("%02x", pmk1[c]);
 		}
-	fprintf(stdout, "\n\n");
+	printf("\n");
 	}
+if(PKCS5_PBKDF2_HMAC(pwname, pwlen, essid, essidlen, 4096, EVP_sha256(), 32, pmk256) != 0)
+	{
+	printf("plainmasterkey (SHA256): ");
+	for(c = 0; c< 32; c++)
+		{
+		printf("%02x", pmk256[c]);
+		}
+	printf("\n\n");
+	}
+
 return;	
 }
 /*===========================================================================*/
@@ -914,8 +926,8 @@ printf("%s %s (C) %s ZeroBeat\n"
 	"usage: %s <options>\n"
 	"\n"
 	"options:\n"
-	"-e <essid>    : input single essid (networkname: 1 .. 32 characters)\n"
-	"-p <password> : input single password (8 .. 63 characters)\n"
+	"-e <essid>    : input single essid (networkname: 1 .. 32 characters) requires -p\n"
+	"-p <password> : input single password (8 .. 63 characters) requires -e\n"
 	"-i <file>     : input passwordlist\n"
 	"-I <file>     : input combilist (essid:password)\n"
 	"-a <file>     : output plainmasterkeys as ASCII file (hashcat -m 2501)\n"
