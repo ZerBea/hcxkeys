@@ -360,7 +360,7 @@ while ((auswahl = getopt(argc, argv, "p:e:i:I:a:A:c:h")) != -1)
 		essidlen = strlen(essidname);
 		if((essidlen < 1) || (essidlen > 32))
 			{
-			fprintf(stderr, "error wrong essid len)\n");
+			fprintf(stderr, "error wrong essid len\n");
 			exit(EXIT_FAILURE);
 			}
 		break;
@@ -370,7 +370,7 @@ while ((auswahl = getopt(argc, argv, "p:e:i:I:a:A:c:h")) != -1)
 		pwlen = strlen(pwname);
 		if((pwlen < 8) || (pwlen > 63))
 			{
-			fprintf(stderr, "error wrong password len)\n");
+			fprintf(stderr, "error wrong password len\n");
 			exit(EXIT_FAILURE);
 			}
 		break;
