@@ -12,6 +12,7 @@
 #include <stdio_ext.h>
 #include <openssl/evp.h>
 #include "common.h"
+#include "common.c"
 
 #define COWPATTY_SIGNATURE 0x43575041L
 
@@ -78,21 +79,23 @@ return len;
 void filecombiout(FILE *fhcombi, FILE *fhascii, FILE *fhasciipw, FILE *fhcow)
 {
 int c;
-char *ptr1 = NULL;
-char *ptr2 = NULL;
 int combilen;
-int saltlen;
+int essidlen;
 int pwlen;
+int p;
 int cr;
 cow_head_t cow;
 uint8_t cowreclen = 0;
 long int pmkcount = 0;
 long int skippedcount = 0;
 
-char combiline[100];
-unsigned char salt[34];
-char password[64];
+char combiline[256];
+
+uint8_t essidbuf[128];
+uint8_t pwbuf[128];
+
 unsigned char pmk[64];
+
 
 signal(SIGINT, programmende);
 
@@ -111,7 +114,7 @@ if(fhcow != NULL)
 		}
 	}
 
-while((progende != TRUE) && ((combilen = fgetline(fhcombi, 100, combiline)) != -1))
+while((progende != TRUE) && ((combilen = fgetline(fhcombi, 256, combiline)) != -1))
 	{
 	if(combilen < 10)
 		{
@@ -119,34 +122,46 @@ while((progende != TRUE) && ((combilen = fgetline(fhcombi, 100, combiline)) != -
 		continue;
 		}
 
-	ptr1 = combiline;
-	ptr2 = strchr(ptr1, ':') +1;
-	pwlen = strlen(ptr2);
-	if((pwlen < 8) || (pwlen > 63))
-		{
-		skippedcount++;
-		continue;
-		}
-	memset(&password, 0, 64);
-	memcpy(&password, ptr2, pwlen);
+	p = getdelimiterpos((uint8_t*)combiline, ':');
+	essidlen = p;
+	pwlen = combilen -p -1;
 
-	saltlen = strlen(ptr1);
-	if(saltlen < 3)
+	memset(&essidbuf, 0, 128);
+	if(is_hexify((uint8_t*)combiline, essidlen) == true)
 		{
-		skippedcount++;
-		continue;
+		essidlen = do_unhexify((uint8_t*)combiline, essidlen, essidbuf, 128);
 		}
-	saltlen -= pwlen +1;
-	if((saltlen < 1) || (saltlen > 32))
+	else
+		memcpy(&essidbuf, &combiline, essidlen);
+
+	if((essidlen < 1) || (essidlen > 32))
 		{
 		skippedcount++;
 		continue;
 		}
 
-	memset(&salt, 0, 34);
-	memcpy(&salt, ptr1, saltlen);
+	if(is_hexify((uint8_t*)combiline +p +1, pwlen) == true)
+		{
+		pwlen = do_unhexify((uint8_t*)combiline +p +1, pwlen, pwbuf, 128);
+		}
+	else
+		{
+		memcpy(pwbuf, &combiline[p +1], pwlen);
+		if((pwlen < 8) || (pwlen > 63))
+			{
+			printf("\x1B[31m%s\x1B[0m\n", combiline);
+			skippedcount++;
+			continue;
+			}
+		}
 
-	if( PKCS5_PBKDF2_HMAC_SHA1(password, pwlen, salt, saltlen, 4096, 32, pmk) != 0 )
+	if((pwlen < 8) || (pwlen > 64))
+		{
+		skippedcount++;
+		continue;
+		}
+
+	if( PKCS5_PBKDF2_HMAC_SHA1((const char*)pwbuf, pwlen, essidbuf, essidlen, 4096, 32, pmk) != 0 )
 		{
 		if(fhcow != NULL)
 			{
@@ -157,7 +172,7 @@ while((progende != TRUE) && ((combilen = fgetline(fhcombi, 100, combiline)) != -
 				fprintf(stderr, "error writing cowpatty file\n");
 				exit(EXIT_FAILURE);
 				}
-			fprintf(fhcow, "%s", password);
+			cr = fwrite(&pwbuf, sizeof(uint8_t), pwlen, fhcow);
 			cr = fwrite(&pmk, sizeof(uint8_t), 32, fhcow);
 			if(cr != 32)
 				{
@@ -177,7 +192,7 @@ while((progende != TRUE) && ((combilen = fgetline(fhcombi, 100, combiline)) != -
 			fprintf(fhascii, "\n");
 
 		if(fhasciipw != NULL)
-			fprintf(fhasciipw, ":%s\n", password);
+			fprintf(fhasciipw, ":%s\n", pwbuf);
 
 
 
