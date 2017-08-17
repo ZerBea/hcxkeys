@@ -158,7 +158,7 @@ for (p = 0; p < MD5_DIGEST_LENGTH; p++)
 	}
 
 base64(digestmd5, MD5_DIGEST_LENGTH, &hashrecord);
-printf("\nsmd5-base64...: %s", hashrecord);
+printf("\nmd5-base64...: %s", hashrecord);
 free(hashrecord);
 
 printf("\nmd5-ascii.....: ");
