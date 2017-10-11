@@ -9,12 +9,21 @@
 #include <time.h>
 #include <signal.h>
 #include <sys/stat.h>
+#ifdef __APPLE__
+#define strdupa strdup
+#include <libgen.h>
+#else
 #include <stdio_ext.h>
+#endif
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
 #define CL_USE_DEPRECATED_OPENCL_1_2_APIS
+#ifdef __APPLE__
+#include <OpenCL/cl.h>
+#else
 #include <CL/cl.h>
+#endif
 #include "common.h"
 #include "common.c"
 
