@@ -172,7 +172,7 @@ struct mac_frame
  unsigned	version : 2;
  unsigned	type : 	2;
  unsigned	subtype : 4;
- 
+
  unsigned	to_ds : 1;
  unsigned	from_ds : 1;
  unsigned	more_frag : 1;
@@ -557,7 +557,7 @@ typedef struct pppchap_frame pppchap_frame_t;
 
 struct netdb
 {
- long int	tv_sec;  
+ long int	tv_sec;
  long int	tv_usec;
  adr_t		mac_ap;
  adr_t		mac_sta;
@@ -570,7 +570,7 @@ typedef struct netdb netdb_t;
 
 struct eapdb
 {
- long int	tv_sec;  
+ long int	tv_sec;
  time_t		tv_usec;
  adr_t		mac_ap;
  adr_t		mac_sta;
@@ -622,7 +622,7 @@ typedef struct hcx hcx_t;
 /* globale Konstante */
 
 
-const uint8_t channellist[] = 
+const uint8_t channellist[] =
 {
 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13 ,14,
 36, 40, 44, 48, 52, 56, 60, 64,
