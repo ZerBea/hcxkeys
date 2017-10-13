@@ -13,12 +13,12 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
-#define CL_USE_DEPRECATED_OPENCL_1_2_APIS 
+#define CL_USE_DEPRECATED_OPENCL_1_2_APIS
 #include <CL/cl.h>
 #include "common.h"
 #include "common.c"
 
- 
+
 #define MAX_SOURCE_SIZE (0x1000000)
 typedef struct
 {
@@ -68,6 +68,9 @@ cl_kernel kernel;
 size_t workgroupsize;
 
 uint8_t progende = FALSE;
+
+uint8_t essidlen = 0;
+char *essidname = NULL;
 
 FILE *fhascii = NULL;
 FILE *fhasciipw = NULL;
@@ -466,7 +469,7 @@ if (g_outbuffer != NULL)
 return;
 }
 /*===========================================================================*/
-void precalc(gpu_inbuffer *zeigerinbuffer, int passwdlen, char *password, int essidlen, char *essidname)
+void precalc(gpu_inbuffer *zeigerinbuffer, uint8_t passwdlen, char *password)
 {
 
 int i;
@@ -569,17 +572,14 @@ return len;
 /*===========================================================================*/
 void filecombiout(FILE *fhcombi)
 {
-int c, p;
+int c;
+char *ptr1 = NULL;
 int combilen;
 int pwlen;
-int essidlen;
 int cr;
 cow_head_t cow;
 long int pmkcount = 0;
 long int skippedcount = 0;
-
-uint8_t essidbuf[128];
-uint8_t pwbuf[128];
 
 char combiline[100];
 
@@ -608,48 +608,34 @@ while((progende != TRUE) && ((combilen = fgetline(fhcombi, 100, combiline)) != -
 		continue;
 		}
 
-	p = getdelimiterpos((uint8_t*)combiline, ':');
-	essidlen = p;
-	pwlen = combilen -p -1;
-
-	memset(&essidbuf, 0, 128);
-	if(is_hexify((uint8_t*)combiline, essidlen) == true)
+	essidname = combiline;
+	ptr1 = strchr(combiline, ':');
+	if(ptr1 == NULL)
 		{
-		essidlen = do_unhexify((uint8_t*)combiline, essidlen, essidbuf, 128);
+		skippedcount++;
+		continue;
 		}
-	else
-		memcpy(&essidbuf, &combiline, essidlen);
 
+	ptr1[0] = 0;
+	ptr1++;
+	essidlen = strlen(essidname);
 	if((essidlen < 1) || (essidlen > 32))
 		{
 		skippedcount++;
 		continue;
 		}
 
-	if(is_hexify((uint8_t*)combiline +p +1, pwlen) == true)
-		{
-		pwlen = do_unhexify((uint8_t*)combiline +p +1, pwlen, pwbuf, 128);
-		}
-	else
-		{
-		memcpy(pwbuf, &combiline[p +1], pwlen);
-		if((pwlen < 8) || (pwlen > 63))
-			{
-			printf("\x1B[31m%s\x1B[0m\n", combiline);
-			skippedcount++;
-			continue;
-			}
-		}
-
-	if((pwlen < 8) || (pwlen > 64))
+	pwlen = strlen(ptr1);
+	if((pwlen < 8) || (pwlen > 63))
 		{
 		skippedcount++;
 		continue;
 		}
 
 	memset(&password[c][0], 0, 64);
-	memcpy(&password[c][0], &pwbuf, pwlen);
-	precalc(&inbuffer[c], pwlen, &password[c][0], essidlen, (char*)essidbuf);
+	memcpy(&password[c][0], ptr1, pwlen);
+
+	precalc(&inbuffer[c], pwlen, &password[c][0]);
 	c++;
 	pmkcount++;
 	if(c >= LISTSIZE)
@@ -659,7 +645,7 @@ while((progende != TRUE) && ((combilen = fgetline(fhcombi, 100, combiline)) != -
 		}
 	if((pmkcount % 1000) == 0)
 		printf("\r%ld plainmasterkeys generated", pmkcount);
-	}	
+	}
 
 if(c != 0)
 	finalcalc(c);
@@ -669,7 +655,6 @@ printf("\r%ld plainmasterkeys generated, %ld password(s) skipped\n", pmkcount, s
 return;
 }
 /*===========================================================================*/
-/*
 void processpasswords(FILE *fhpwlist)
 {
 int pwlen;
@@ -713,7 +698,7 @@ while((progende != TRUE) && ((pwlen = fgetline(fhpwlist, 64, &password[c][0])) !
 		}
 	if((pmkcount % 1000) == 0)
 		printf("\r%ld plainmasterkeys generated", pmkcount);
-	}	
+	}
 
 if(c != 0)
 	finalcalc(c);
@@ -722,7 +707,6 @@ printf("\r%ld plainmasterkeys generated, %ld password(s) skipped\n", pmkcount, s
 
 return;
 }
-*/
 /*===========================================================================*/
 int initopencl(unsigned int gplfc, unsigned int gdevc)
 {
@@ -897,7 +881,7 @@ free(platforms);
 return TRUE;
 }
 /*===========================================================================*/
-void singlepmkout(char *pwname, int pwlen, char *essidname, int essidlen)
+void singlepmkout(char *pwname, int pwlen)
 {
 int c;
 
@@ -933,7 +917,7 @@ if(PKCS5_PBKDF2_HMAC(pwname, pwlen, essid, essidlen, 4096, EVP_sha256(), 32, pmk
 	printf("\n\n");
 	}
 
-return;	
+return;
 }
 /*===========================================================================*/
 static void usage(char *eigenname)
@@ -966,13 +950,11 @@ unsigned int gplfc = 0;
 unsigned int gdevc= 0;
 
 int pwlen = 0;
-int essidlen = 0;
 int listdeviceinfo = FALSE;
 
 char *eigenname = NULL;
 char *eigenpfadname = NULL;
 char *pwname = NULL;
-char *essidname = NULL;
 
 eigenpfadname = strdupa(argv[0]);
 eigenname = basename(eigenpfadname);
@@ -982,7 +964,6 @@ while ((auswahl = getopt(argc, argv, "p:e:i:I:a:A:c:P:D:lh")) != -1)
 	{
 	switch (auswahl)
 		{
-
 		case 'e':
 		essidname = optarg;
 		essidlen = strlen(essidname);
@@ -1078,7 +1059,7 @@ if(initopencl(gplfc, gdevc) != TRUE)
 	exit(EXIT_FAILURE);
 	}
 
-/*
+
 if((essidname != NULL) && (pwname != NULL))
 	{
 	singlepmkout(pwname, pwlen);
@@ -1090,8 +1071,7 @@ else if((essidname != NULL) && (fhpwlist != NULL))
 	processpasswords(fhpwlist);
 	}
 
-*/
-if(fhcombi != NULL)
+else if(fhcombi != NULL)
 	{
 	filecombiout(fhcombi);
 	}
