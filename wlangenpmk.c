@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>

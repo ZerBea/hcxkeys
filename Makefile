@@ -6,7 +6,6 @@ CFLAGS	= -std=gnu99 -O3 -Wall -Wextra
 INSTFLAGS = -m 0755
 
 ifeq ($(HOSTOS), Linux)
-CFLAGS += -D_GNU_SOURCE
 INSTFLAGS += -D
 endif
 
