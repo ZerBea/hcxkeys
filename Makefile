@@ -1,21 +1,35 @@
 INSTALLDIR	= /usr/local/bin
 
+HOSTOS := $(shell uname -s)
 CC	= gcc
-CFLAGS	= -O3 -Wall -Wextra
+CFLAGS	= -std=gnu99 -O3 -Wall -Wextra
+INSTFLAGS = -m 0755
 
+ifeq ($(HOSTOS), Linux)
+CFLAGS += -D_GNU_SOURCE
+INSTFLAGS += -D
+endif
+
+ifeq ($(HOSTOS), Darwin)
+CFLAGS += -L/usr/local/opt/openssl/lib -I/usr/local/opt/openssl/include
+endif
 
 all: build
 
 build:
 	$(CC) $(CFLAGS) -o wlangenpmk wlangenpmk.c -lcrypto
+ifeq ($(HOSTOS), Darwin)
+	$(CC) $(CFLAGS) -o wlangenpmkocl wlangenpmkocl.c -lcrypto -Wl,-framework,OpenCL -lm
+else
 	$(CC) $(CFLAGS) -o wlangenpmkocl wlangenpmkocl.c -lcrypto -lOpenCL
+endif
 	$(CC) $(CFLAGS) -o pwhash pwhash.c -lcrypto
 
 
 install: build
-	install -D -m 0755 wlangenpmk $(INSTALLDIR)/wlangenpmk
-	install -D -m 0755 wlangenpmkocl $(INSTALLDIR)/wlangenpmkocl
-	install -D -m 0755 pwhash $(INSTALLDIR)/pwhash
+	install $(INSTFLAGS) wlangenpmk $(INSTALLDIR)/wlangenpmk
+	install $(INSTFLAGS) wlangenpmkocl $(INSTALLDIR)/wlangenpmkocl
+	install $(INSTFLAGS) pwhash $(INSTALLDIR)/pwhash
 	rm -f wlangenpmk
 	rm -f wlangenpmkocl
 	rm -f pwhash

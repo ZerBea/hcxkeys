@@ -9,7 +9,12 @@
 #include <time.h>
 #include <signal.h>
 #include <sys/stat.h>
+#ifdef __APPLE__
+#define strdupa strdup
+#include <libgen.h>
+#else
 #include <stdio_ext.h>
+#endif
 #include <openssl/evp.h>
 #include "common.h"
 
