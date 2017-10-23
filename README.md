@@ -2,9 +2,7 @@ hcxkeys
 ==============
 
 Small set of tools to generate plainmasterkeys (rainbowtables) and hashes
-for the use with latest hashcat. The tools are 100% compatible to hashcat
-and recommended by hashcat (that means hcxkeys 3.6.0 working with
-hcxtools 3.6.0 and hashcat 3.6.0).
+for the use with latest hashcat and latest John the Ripper.
 
 
 Brief description
