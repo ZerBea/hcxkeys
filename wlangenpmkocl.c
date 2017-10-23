@@ -719,7 +719,6 @@ return;
 /*===========================================================================*/
 int initopencl(unsigned int gplfc, unsigned int gdevc)
 {
-unsigned int pc;
 cl_program program;
 
 char *devicename;
@@ -744,22 +743,19 @@ if (ret != CL_SUCCESS)
 if(gplfc >= platformCount)
 	return FALSE;
 
-for (pc = 0; pc < platformCount; pc++)
+ret = clGetDeviceIDs(platforms[gplfc], CL_DEVICE_TYPE_ALL, 0, NULL, &deviceCount);
+if (ret != CL_SUCCESS)
 	{
-	ret = clGetDeviceIDs(platforms[pc], CL_DEVICE_TYPE_ALL, 0, NULL, &deviceCount);
-	if (ret != CL_SUCCESS)
-		{
-		printf("OpenCL Error %s\n\n", getCLresultMsg(ret));
-		return FALSE;
-		}
+	printf("OpenCL Error %s\n\n", getCLresultMsg(ret));
+	return FALSE;
+	}
 
-	devices = (cl_device_id*) malloc(sizeof(cl_device_id) * deviceCount);
-	ret = clGetDeviceIDs(platforms[pc], CL_DEVICE_TYPE_ALL, deviceCount, devices, NULL);
-	if (ret != CL_SUCCESS)
-		{
-		printf("OpenCL Error %s\n", getCLresultMsg(ret));
-		return FALSE;
-		}
+devices = (cl_device_id*) malloc(sizeof(cl_device_id) * deviceCount);
+ret = clGetDeviceIDs(platforms[gplfc], CL_DEVICE_TYPE_ALL, deviceCount, devices, NULL);
+if (ret != CL_SUCCESS)
+	{
+	printf("OpenCL Error %s\n", getCLresultMsg(ret));
+	return FALSE;
 	}
 
 if(gdevc >= deviceCount)
