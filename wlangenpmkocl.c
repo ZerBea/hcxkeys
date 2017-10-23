@@ -60,7 +60,9 @@ struct cow_head
 typedef struct cow_head cow_head_t;
 #define	COWHEAD_SIZE (sizeof(cow_head_t))
 
-#define LISTSIZE 612
+#define MAX_WORKSIZE (1024*1024)  /* Max. figure */
+static size_t gws = 16;           /* Start figure; will auto-tune */
+static cl_ulong max_gpu_alloc;    /* Memory limit */
 
 /*===========================================================================*/
 /* globale Variablen */
@@ -74,7 +76,6 @@ cl_int ret;
 cl_context context;
 cl_command_queue command_queue;
 cl_kernel kernel;
-size_t workgroupsize;
 
 uint8_t progende = FALSE;
 
@@ -85,8 +86,17 @@ FILE *fhascii = NULL;
 FILE *fhasciipw = NULL;
 FILE *fhcow = NULL;
 
-gpu_inbuffer inbuffer[LISTSIZE];
-char password[LISTSIZE][64];
+gpu_inbuffer inbuffer[MAX_WORKSIZE];
+char password[MAX_WORKSIZE][64];
+
+#define HANDLE_CLERROR(command)         \
+        do { cl_int __err = (command); \
+                if (__err != CL_SUCCESS) { \
+                        fprintf(stderr, "OpenCL %s error in %s:%d\n", \
+                            getCLresultMsg(__err), __FILE__, __LINE__); \
+                } \
+        } while (0)
+
 
 static const char *kerneldata = "\n" \
 "#ifndef uint32_t    \n"  \
@@ -352,78 +362,46 @@ switch (error)
 return "Unknown CLresult";
 }
 /*===========================================================================*/
-void finalcalc(int listsize)
+uint32_t finalcalc(size_t listsize)
 {
-int c;
+size_t c;
 int cr;
 cl_mem g_inbuffer, g_outbuffer;
-gpu_outbuffer outbuffer[listsize];
+gpu_outbuffer *outbuffer;
 gpu_outbuffer zeigerout;
 g_inbuffer = NULL;
 g_outbuffer = NULL;
 cl_event clEvents[3];
-size_t global_item_size;
 uint8_t cowreclen;
-
+cl_ulong start_ts, end_ts;
+uint32_t ms_dur;
 uint32_t cowpmk[8];
 
-g_inbuffer = clCreateBuffer(context, CL_MEM_READ_ONLY, workgroupsize *sizeof(gpu_inbuffer), NULL, &ret);
-ret = clEnqueueWriteBuffer(command_queue, g_inbuffer, CL_FALSE, 0, listsize *sizeof(gpu_inbuffer), &inbuffer, 0, NULL, &clEvents[0]);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error 1 %s\n", getCLresultMsg(ret));
-	return;
-	}
+outbuffer = malloc(listsize *sizeof(gpu_outbuffer));
+g_inbuffer = clCreateBuffer(context, CL_MEM_READ_ONLY, listsize *sizeof(gpu_inbuffer), NULL, &ret);
+HANDLE_CLERROR(clEnqueueWriteBuffer(command_queue, g_inbuffer, CL_FALSE, 0, listsize *sizeof(gpu_inbuffer), &inbuffer, 0, NULL, &clEvents[0]));
+g_outbuffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY, listsize *sizeof(gpu_outbuffer), NULL, &ret);
 
-g_outbuffer = clCreateBuffer(context, CL_MEM_WRITE_ONLY, workgroupsize *sizeof(gpu_outbuffer), NULL, &ret);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error%s\n", getCLresultMsg(ret));
-	return;
-	}
+HANDLE_CLERROR(clSetKernelArg(kernel, 0, sizeof(cl_mem), &g_inbuffer));
+HANDLE_CLERROR(clSetKernelArg(kernel, 1, sizeof(cl_mem), &g_outbuffer));
 
-ret = clSetKernelArg(kernel, 0, sizeof(cl_mem), &g_inbuffer);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error%s\n", getCLresultMsg(ret));
-	return;
-	}
+HANDLE_CLERROR(clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, &listsize, NULL, 1, clEvents, &clEvents[1]));
+HANDLE_CLERROR(clEnqueueReadBuffer(command_queue, g_outbuffer, CL_FALSE, 0, listsize *sizeof(gpu_outbuffer), outbuffer, 2, clEvents, &clEvents[2]));
 
-ret = clSetKernelArg(kernel, 1, sizeof(cl_mem), &g_outbuffer);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error%s\n", getCLresultMsg(ret));
-	return;
-	}
+HANDLE_CLERROR(clFinish(command_queue));
 
-global_item_size = listsize *sizeof(gpu_outbuffer); // Process the entire lists
+HANDLE_CLERROR(clWaitForEvents(3, clEvents));
 
-ret = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, &global_item_size, NULL, 1, &clEvents[0], &clEvents[1]);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error%s\n", getCLresultMsg(ret));
-	return;
-	}
+HANDLE_CLERROR(clGetEventProfilingInfo(clEvents[1], CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &start_ts, NULL));
+HANDLE_CLERROR(clGetEventProfilingInfo(clEvents[2], CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &end_ts, NULL));
 
-ret = clEnqueueReadBuffer(command_queue, g_outbuffer, CL_FALSE, 0, listsize *sizeof(gpu_outbuffer), &outbuffer, 2, &clEvents[0], &clEvents[2]);
-if (ret != CL_SUCCESS)
+ms_dur = (uint32_t)((end_ts - start_ts) / 1000000);
+//fprintf(stderr, "GWS %zu Time: %u ms\n", gws, ms_dur);
+if (ms_dur <= 10000 &&
+    2 * gws < MAX_WORKSIZE &&
+    2 * gws * sizeof(gpu_inbuffer) < max_gpu_alloc)
 	{
-	printf("OpenCL Error%s\n", getCLresultMsg(ret));
-	return;
-	}
-
-ret = clFinish(command_queue);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error%s\n", getCLresultMsg(ret));
-	return;
-	}
-
-ret = clWaitForEvents(3, &clEvents[0]);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error%s\n", getCLresultMsg(ret));
-	return;
+	gws *= 2;
 	}
 
 for(c = 0; c < listsize; c++)
@@ -474,8 +452,9 @@ if (g_inbuffer != NULL)
 	clReleaseMemObject(g_inbuffer);
 if (g_outbuffer != NULL)
 	clReleaseMemObject(g_outbuffer);
+free(outbuffer);
 
-return;
+return listsize * 1000 / ms_dur;
 }
 /*===========================================================================*/
 void precalc(gpu_inbuffer *zeigerinbuffer, uint8_t passwdlen, char *password)
@@ -581,7 +560,7 @@ return len;
 /*===========================================================================*/
 void filecombiout(FILE *fhcombi)
 {
-int c;
+size_t c;
 char *ptr1 = NULL;
 int combilen;
 int pwlen;
@@ -589,7 +568,7 @@ int cr;
 cow_head_t cow;
 long int pmkcount = 0;
 long int skippedcount = 0;
-
+uint32_t speed = 0;
 char combiline[100];
 
 signal(SIGINT, programmende);
@@ -647,17 +626,17 @@ while((progende != TRUE) && ((combilen = fgetline(fhcombi, 100, combiline)) != -
 	precalc(&inbuffer[c], pwlen, &password[c][0]);
 	c++;
 	pmkcount++;
-	if(c >= LISTSIZE)
+	if(c >= gws)
 		{
-		finalcalc(c);
+		speed = finalcalc(c);
 		c = 0;
 		}
 	if((pmkcount % 1000) == 0)
-		printf("\r%ld plainmasterkeys generated", pmkcount);
+		printf("\r%ld plainmasterkeys generated (%u/s)", pmkcount, speed);
 	}
 
 if(c != 0)
-	finalcalc(c);
+	speed = finalcalc(c);
 
 printf("\r%ld plainmasterkeys generated, %ld password(s) skipped\n", pmkcount, skippedcount);
 
@@ -667,11 +646,12 @@ return;
 void processpasswords(FILE *fhpwlist)
 {
 int pwlen;
-int c;
+size_t c;
 int cr;
 long int pmkcount = 0;
 long int skippedcount = 0;
 cow_head_t cow;
+uint32_t speed = 0;
 
 signal(SIGINT, programmende);
 if((fhcow != NULL) && (essidname != NULL))
@@ -700,17 +680,17 @@ while((progende != TRUE) && ((pwlen = fgetline(fhpwlist, 64, &password[c][0])) !
 	precalc(&inbuffer[c], pwlen, &password[c][0]);
 	c++;
 	pmkcount++;
-	if(c >= LISTSIZE)
+	if(c >= gws)
 		{
-		finalcalc(c);
+		speed = finalcalc(c);
 		c = 0;
 		}
 	if((pmkcount % 1000) == 0)
-		printf("\r%ld plainmasterkeys generated", pmkcount);
+		printf("\r%ld plainmasterkeys generated (%u/s)", pmkcount, speed);
 	}
 
 if(c != 0)
-	finalcalc(c);
+	speed = finalcalc(c);
 
 printf("\r%ld plainmasterkeys generated, %ld password(s) skipped\n", pmkcount, skippedcount);
 
@@ -719,95 +699,41 @@ return;
 /*===========================================================================*/
 int initopencl(unsigned int gplfc, unsigned int gdevc)
 {
-unsigned int pc;
 cl_program program;
 
 char *devicename;
 size_t devicenamesize;
 
-ret = clGetPlatformIDs(0, NULL, &platformCount);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
-	}
+HANDLE_CLERROR(clGetPlatformIDs(0, NULL, &platformCount));
 
 platforms = (cl_platform_id*) malloc(sizeof(cl_platform_id) * platformCount);
 
-ret = clGetPlatformIDs(platformCount, platforms, NULL);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
-	}
+HANDLE_CLERROR(clGetPlatformIDs(platformCount, platforms, NULL));
 
 if(gplfc >= platformCount)
 	return FALSE;
 
-for (pc = 0; pc < platformCount; pc++)
-	{
-	ret = clGetDeviceIDs(platforms[pc], CL_DEVICE_TYPE_ALL, 0, NULL, &deviceCount);
-	if (ret != CL_SUCCESS)
-		{
-		printf("OpenCL Error %s\n\n", getCLresultMsg(ret));
-		return FALSE;
-		}
+HANDLE_CLERROR(clGetDeviceIDs(platforms[gplfc], CL_DEVICE_TYPE_ALL, 0, NULL, &deviceCount));
 
-	devices = (cl_device_id*) malloc(sizeof(cl_device_id) * deviceCount);
-	ret = clGetDeviceIDs(platforms[pc], CL_DEVICE_TYPE_ALL, deviceCount, devices, NULL);
-	if (ret != CL_SUCCESS)
-		{
-		printf("OpenCL Error %s\n", getCLresultMsg(ret));
-		return FALSE;
-		}
-	}
+devices = (cl_device_id*) malloc(sizeof(cl_device_id) * deviceCount);
+HANDLE_CLERROR(clGetDeviceIDs(platforms[gplfc], CL_DEVICE_TYPE_ALL, deviceCount, devices, NULL));
 
 if(gdevc >= deviceCount)
 	return FALSE;
 
-ret = clGetDeviceInfo(devices[gdevc], CL_DEVICE_MAX_WORK_GROUP_SIZE, sizeof(workgroupsize), &workgroupsize, NULL);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
-	}
+HANDLE_CLERROR(clGetDeviceInfo(devices[gdevc], CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(max_gpu_alloc), &max_gpu_alloc, NULL));
 
-ret = clGetDeviceInfo(devices[gdevc], CL_DEVICE_NAME, 0, NULL, &devicenamesize);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
-	}
+HANDLE_CLERROR(clGetDeviceInfo(devices[gdevc], CL_DEVICE_NAME, 0, NULL, &devicenamesize));
 
 devicename = (char*) malloc(devicenamesize);
-ret = clGetDeviceInfo(devices[gdevc], CL_DEVICE_NAME, devicenamesize, devicename, NULL);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
-	}
+HANDLE_CLERROR(clGetDeviceInfo(devices[gdevc], CL_DEVICE_NAME, devicenamesize, devicename, NULL));
 printf("using: %s\n", devicename);
 free(devicename);
 
 context = clCreateContext( NULL, 1, &devices[gdevc], NULL, NULL, &ret);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
-	}
 
-command_queue = clCreateCommandQueue(context, devices[gdevc], 0, &ret);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
-	}
+command_queue = clCreateCommandQueue(context, devices[gdevc], CL_QUEUE_PROFILING_ENABLE, &ret);
 program = clCreateProgramWithSource(context, 1, (const char **) &kerneldata, NULL, &ret);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
-	}
 
 ret = clBuildProgram(program, 1, &devices[gdevc], NULL, NULL, NULL);
 if (ret != CL_SUCCESS)
@@ -839,38 +765,18 @@ char* value2;
 size_t valueSize;
 
 
-ret = clGetPlatformIDs(0, NULL, &platformCount);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
-	}
+HANDLE_CLERROR(clGetPlatformIDs(0, NULL, &platformCount));
 
 platforms = (cl_platform_id*) malloc(sizeof(cl_platform_id) * platformCount);
 
-ret = clGetPlatformIDs(platformCount, platforms, NULL);
-if (ret != CL_SUCCESS)
-	{
-	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
-	}
+HANDLE_CLERROR(clGetPlatformIDs(platformCount, platforms, NULL));
 
 for (p = 0; p < platformCount; p++)
 	{
-	ret = clGetDeviceIDs(platforms[p], CL_DEVICE_TYPE_ALL, 0, NULL, &deviceCount);
-	if (ret != CL_SUCCESS)
-		{
-		printf("OpenCL Error %s\n\n", getCLresultMsg(ret));
-		return FALSE;
-		}
+		HANDLE_CLERROR(clGetDeviceIDs(platforms[p], CL_DEVICE_TYPE_ALL, 0, NULL, &deviceCount));
 
 	devices = (cl_device_id*) malloc(sizeof(cl_device_id) * deviceCount);
-	ret = clGetDeviceIDs(platforms[p], CL_DEVICE_TYPE_ALL, deviceCount, devices, NULL);
-	if (ret != CL_SUCCESS)
-		{
-		printf("OpenCL Error %s\n", getCLresultMsg(ret));
-		return FALSE;
-		}
+	HANDLE_CLERROR(clGetDeviceIDs(platforms[p], CL_DEVICE_TYPE_ALL, deviceCount, devices, NULL));
 	for (d = 0; d < deviceCount; d++)
 		{
 		clGetDeviceInfo(devices[d], CL_DEVICE_NAME, 0, NULL, &valueSize);
