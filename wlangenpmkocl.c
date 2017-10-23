@@ -397,7 +397,7 @@ HANDLE_CLERROR(clGetEventProfilingInfo(clEvents[2], CL_PROFILING_COMMAND_END, si
 
 ms_dur = (uint32_t)((end_ts - start_ts) / 1000000);
 //fprintf(stderr, "GWS %zu Time: %u ms\n", gws, ms_dur);
-if (ms_dur <= 10000 &&
+if (ms_dur <= 100 &&
     2 * gws < MAX_WORKSIZE &&
     2 * gws * sizeof(gpu_inbuffer) < max_gpu_alloc)
 	{
