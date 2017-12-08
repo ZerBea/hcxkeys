@@ -565,11 +565,13 @@ char *ptr1 = NULL;
 int combilen;
 int pwlen;
 int cr;
+int hr;
 cow_head_t cow;
 long int pmkcount = 0;
 long int skippedcount = 0;
 uint32_t speed = 0;
-char combiline[100];
+char combiline[256];
+uint8_t buffhex[128];
 
 signal(SIGINT, programmende);
 if(fhcow != NULL)
@@ -607,6 +609,12 @@ while((progende != TRUE) && ((combilen = fgetline(fhcombi, 100, combiline)) != -
 	ptr1[0] = 0;
 	ptr1++;
 	essidlen = strlen(essidname);
+	if(is_hexify((uint8_t*)essidname, essidlen))
+		{
+		hr = do_unhexify((uint8_t*)essidname, essidlen, buffhex, 128);
+		memcpy(essidname, buffhex, hr);
+		essidlen = hr;
+		}
 	if((essidlen < 1) || (essidlen > 32))
 		{
 		skippedcount++;
@@ -614,6 +622,13 @@ while((progende != TRUE) && ((combilen = fgetline(fhcombi, 100, combiline)) != -
 		}
 
 	pwlen = strlen(ptr1);
+	if(is_hexify((uint8_t*)ptr1, pwlen))
+		{
+		hr = do_unhexify((uint8_t*)ptr1, pwlen, buffhex, 128);
+		memcpy(ptr1, buffhex, hr);
+		pwlen = hr;
+		}
+
 	if((pwlen < 8) || (pwlen > 63))
 		{
 		skippedcount++;
