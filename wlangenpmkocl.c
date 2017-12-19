@@ -590,7 +590,7 @@ if(fhcow != NULL)
 	}
 
 c = 0;
-while((progende != TRUE) && ((combilen = fgetline(fhcombi, 100, combiline)) != -1))
+while((progende != TRUE) && ((combilen = fgetline(fhcombi, 256, combiline)) != -1))
 	{
 	if(combilen < 10)
 		{

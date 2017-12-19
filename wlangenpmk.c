@@ -94,7 +94,7 @@ uint8_t cowreclen = 0;
 long int pmkcount = 0;
 long int skippedcount = 0;
 
-char combiline[100];
+char combiline[256];
 unsigned char salt[34];
 char password[64];
 unsigned char pmk[64];
@@ -116,7 +116,7 @@ if(fhcow != NULL)
 		}
 	}
 
-while((progende != TRUE) && ((combilen = fgetline(fhcombi, 100, combiline)) != -1))
+while((progende != TRUE) && ((combilen = fgetline(fhcombi, 256, combiline)) != -1))
 	{
 	if(combilen < 10)
 		{
