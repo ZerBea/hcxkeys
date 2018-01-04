@@ -864,6 +864,7 @@ static void usage(char *eigenname)
 {
 printf("%s %s (C) %s ZeroBeat\n"
 	"usage: %s <options>\n"
+	"       cat wordlist | %s -e <essid> | hashcat -m 2501 ...\n"
 	"\n"
 	"options:\n"
 	"-e <essid>    : input single essid (networkname: 1 .. 32 characters) requires -p\n"
@@ -877,7 +878,7 @@ printf("%s %s (C) %s ZeroBeat\n"
 	"-D <device>   : input device, default 0 (first device)\n"
 	"-l            : list device info\n"
 	"-h            : this help\n"
-	"\n", eigenname, VERSION, VERSION_JAHR, eigenname);
+	"\n", eigenname, VERSION, VERSION_JAHR, eigenname, eigenname);
 exit(EXIT_FAILURE);
 }
 /*===========================================================================*/
