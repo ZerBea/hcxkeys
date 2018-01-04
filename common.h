@@ -1,5 +1,5 @@
-#define VERSION "4.0.0"
-#define VERSION_JAHR "2017"
+#define VERSION "4.0.1"
+#define VERSION_JAHR "2018"
 
 #if !defined(FALSE)
 #define FALSE 0
