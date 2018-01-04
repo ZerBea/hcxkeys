@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <limits.h>
 #include <time.h>
@@ -67,6 +68,7 @@ static cl_ulong max_gpu_alloc;    /* Memory limit */
 /*===========================================================================*/
 /* globale Variablen */
 
+bool pipeflag = false;
 cl_uint platformCount;
 cl_platform_id *platforms = NULL;
 cl_uint deviceCount;
@@ -77,7 +79,7 @@ cl_context context;
 cl_command_queue command_queue;
 cl_kernel kernel;
 
-uint8_t progende = FALSE;
+uint8_t progende = false;
 
 uint8_t essidlen = 0;
 char *essidname = NULL;
@@ -517,7 +519,7 @@ void programmende(int signum)
 {
 if((signum == SIGINT) || (signum == SIGTERM) || (signum == SIGKILL))
 	{
-	progende = TRUE;
+	progende = true;
 	}
 return;
 }
@@ -590,7 +592,7 @@ if(fhcow != NULL)
 	}
 
 c = 0;
-while((progende != TRUE) && ((combilen = fgetline(fhcombi, 256, combiline)) != -1))
+while((progende != true) && ((combilen = fgetline(fhcombi, 256, combiline)) != -1))
 	{
 	if(combilen < 10)
 		{
@@ -646,15 +648,19 @@ while((progende != TRUE) && ((combilen = fgetline(fhcombi, 256, combiline)) != -
 		speed = finalcalc(c);
 		c = 0;
 		}
-	if((pmkcount % 1000) == 0)
+	if((pipeflag == false) && ((pmkcount % 1000) == 0))
+		{
 		printf("\r%ld plainmasterkeys generated (%u/s)", pmkcount, speed);
+		}
 	}
 
 if(c != 0)
 	speed = finalcalc(c);
 
-printf("\r%ld plainmasterkeys generated, %ld password(s) skipped\n", pmkcount, skippedcount);
-
+if(pipeflag == false)
+	{
+	printf("\r%ld plainmasterkeys generated, %ld password(s) skipped\n", pmkcount, skippedcount);
+	}
 return;
 }
 /*===========================================================================*/
@@ -684,7 +690,7 @@ if((fhcow != NULL) && (essidname != NULL))
 	}
 
 c = 0;
-while((progende != TRUE) && ((pwlen = fgetline(fhpwlist, 64, &password[c][0])) != -1))
+while((progende != true) && ((pwlen = fgetline(fhpwlist, 64, &password[c][0])) != -1))
 	{
 	if((pwlen < 8) || pwlen > 63)
 		{
@@ -700,19 +706,20 @@ while((progende != TRUE) && ((pwlen = fgetline(fhpwlist, 64, &password[c][0])) !
 		speed = finalcalc(c);
 		c = 0;
 		}
-	if((pmkcount % 1000) == 0)
+	if((pipeflag == false) && ((pmkcount % 1000) == 0))
 		printf("\r%ld plainmasterkeys generated (%u/s)", pmkcount, speed);
 	}
 
 if(c != 0)
 	speed = finalcalc(c);
-
-printf("\r%ld plainmasterkeys generated, %ld password(s) skipped\n", pmkcount, skippedcount);
-
+if(pipeflag == false)
+	{
+	printf("\r%ld plainmasterkeys generated, %ld password(s) skipped\n", pmkcount, skippedcount);
+	}
 return;
 }
 /*===========================================================================*/
-int initopencl(unsigned int gplfc, unsigned int gdevc)
+bool initopencl(unsigned int gplfc, unsigned int gdevc)
 {
 cl_program program;
 
@@ -726,7 +733,7 @@ platforms = (cl_platform_id*) malloc(sizeof(cl_platform_id) * platformCount);
 HANDLE_CLERROR(clGetPlatformIDs(platformCount, platforms, NULL));
 
 if(gplfc >= platformCount)
-	return FALSE;
+	return false;
 
 HANDLE_CLERROR(clGetDeviceIDs(platforms[gplfc], CL_DEVICE_TYPE_ALL, 0, NULL, &deviceCount));
 
@@ -734,7 +741,7 @@ devices = (cl_device_id*) malloc(sizeof(cl_device_id) * deviceCount);
 HANDLE_CLERROR(clGetDeviceIDs(platforms[gplfc], CL_DEVICE_TYPE_ALL, deviceCount, devices, NULL));
 
 if(gdevc >= deviceCount)
-	return FALSE;
+	return false;
 
 HANDLE_CLERROR(clGetDeviceInfo(devices[gdevc], CL_DEVICE_MAX_MEM_ALLOC_SIZE, sizeof(max_gpu_alloc), &max_gpu_alloc, NULL));
 
@@ -742,7 +749,10 @@ HANDLE_CLERROR(clGetDeviceInfo(devices[gdevc], CL_DEVICE_NAME, 0, NULL, &devicen
 
 devicename = (char*) malloc(devicenamesize);
 HANDLE_CLERROR(clGetDeviceInfo(devices[gdevc], CL_DEVICE_NAME, devicenamesize, devicename, NULL));
-printf("using: %s\n", devicename);
+if(pipeflag == false)
+	{
+	printf("using: %s\n", devicename);
+	}
 free(devicename);
 
 context = clCreateContext( NULL, 1, &devices[gdevc], NULL, NULL, &ret);
@@ -760,19 +770,19 @@ if (ret != CL_SUCCESS)
     clGetProgramBuildInfo(program, devices[gdevc], CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
     printf("%s\n", buffer);
     exit(1);
-	return FALSE;
+	return false;
 	}
 
 kernel = clCreateKernel(program, "opencl_pmk_kernel", &ret);
 if (ret != CL_SUCCESS)
 	{
 	printf("OpenCL Error %s\n", getCLresultMsg(ret));
-	return FALSE;
+	return false;
 	}
-return TRUE;
+return true;
 }
 /*===========================================================================*/
-int listdevices()
+bool listdevices()
 {
 unsigned int p, d;
 char* value1;
@@ -808,7 +818,7 @@ for (p = 0; p < platformCount; p++)
 	free(devices);
 	}
 free(platforms);
-return TRUE;
+return true;
 }
 /*===========================================================================*/
 void singlepmkout(char *pwname, int pwlen)
@@ -880,7 +890,7 @@ unsigned int gplfc = 0;
 unsigned int gdevc= 0;
 
 int pwlen = 0;
-int listdeviceinfo = FALSE;
+int listdeviceinfo = false;
 
 char *eigenname = NULL;
 char *eigenpfadname = NULL;
@@ -963,7 +973,7 @@ while ((auswahl = getopt(argc, argv, "p:e:i:I:a:A:c:P:D:lh")) != -1)
 		break;
 
 		case 'l':
-		listdeviceinfo = TRUE;
+		listdeviceinfo = true;
 		break;
 
 		case 'h':
@@ -976,14 +986,19 @@ while ((auswahl = getopt(argc, argv, "p:e:i:I:a:A:c:P:D:lh")) != -1)
 		}
 	}
 
-if(listdeviceinfo == TRUE)
+if((essidname != NULL) && (pwname == NULL) && (fhpwlist == NULL) && (fhcombi == NULL) && (fhascii == NULL))
 	{
-	if(listdevices() != TRUE)
+	pipeflag = true;
+	}
+
+if(listdeviceinfo == true)
+	{
+	if(listdevices() != true)
 		exit(EXIT_FAILURE);
 	return EXIT_SUCCESS;
 	}
 
-if(initopencl(gplfc, gdevc) != TRUE)
+if(initopencl(gplfc, gdevc) != true)
 	{
 	fprintf(stderr, "couldn't initialize devices\n");
 	exit(EXIT_FAILURE);
@@ -1004,6 +1019,13 @@ else if((essidname != NULL) && (fhpwlist != NULL))
 else if(fhcombi != NULL)
 	{
 	filecombiout(fhcombi);
+	}
+
+else if((essidname != NULL) && (pwname == NULL) && (fhpwlist == NULL) && (fhcombi == NULL) && (fhascii == NULL))
+	{
+	fhascii = stdout;
+	fhpwlist = stdin;
+	processpasswords(fhpwlist);
 	}
 
 if(devices != NULL)
