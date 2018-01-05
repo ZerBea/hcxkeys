@@ -880,10 +880,12 @@ printf("%s %s (C) %s ZeroBeat\n"
 	"\n"
 	"examples of stdin/stdout usage:\n"
 	"cat wordlist | %s -e <essid> | hashcat -m 2501 ...\n"
-	"cat wordlist | %s -e <essid> > pmklist\n"
+	"cat wordlist | %s -e <essid> > <pmklist>\n"
 	"or use classic mode:\n"
-	"wlangenpmkocl -e <essid> -i wordlist -a pmklist\n"
-	"\n", eigenname, VERSION, VERSION_JAHR, eigenname, eigenname, eigenname);
+	"%s -e <essid> -i <wordlist -a <pmklist>\n"
+	"or use mixed mode:\n"
+	"%s -e <essid> -i <wordlist > <pmklist>\n"
+	"\n", eigenname, VERSION, VERSION_JAHR, eigenname, eigenname, eigenname, eigenname, eigenname);
 exit(EXIT_FAILURE);
 }
 /*===========================================================================*/
@@ -992,9 +994,26 @@ while ((auswahl = getopt(argc, argv, "p:e:i:I:a:A:c:P:D:lh")) != -1)
 		}
 	}
 
-if((essidname != NULL) && (pwname == NULL) && (fhpwlist == NULL) && (fhcombi == NULL) && (fhascii == NULL))
+if((essidname != NULL) && (fhpwlist == NULL) && (fhascii == NULL) && (pwname == NULL) && (fhcombi == NULL))
 	{
+	printf("running in stdin/stdout mode\n");
 	pipeflag = true;
+	fhascii = stdout;
+	fhpwlist = stdin;
+	}
+
+else if((essidname != NULL) && (fhpwlist != NULL) && (fhascii == NULL) && (pwname == NULL) && (fhcombi == NULL))
+	{
+	printf("running in stdout mode\n");
+	pipeflag = true;
+	fhascii = stdout;
+	}
+
+else if((essidname != NULL) && (fhpwlist == NULL) && (fhascii != NULL) && (pwname == NULL) && (fhcombi == NULL))
+	{
+	printf("running in stdin mode\n");
+	pipeflag = true;
+	fhpwlist = stdin;
 	}
 
 if(listdeviceinfo == true)
@@ -1025,13 +1044,6 @@ else if((essidname != NULL) && (fhpwlist != NULL))
 else if(fhcombi != NULL)
 	{
 	filecombiout(fhcombi);
-	}
-
-else if((essidname != NULL) && (pwname == NULL) && (fhpwlist == NULL) && (fhcombi == NULL) && (fhascii == NULL))
-	{
-	fhascii = stdout;
-	fhpwlist = stdin;
-	processpasswords(fhpwlist);
 	}
 
 if(devices != NULL)
