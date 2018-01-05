@@ -882,9 +882,9 @@ printf("%s %s (C) %s ZeroBeat\n"
 	"cat wordlist | %s -e <essid> | hashcat -m 2501 ...\n"
 	"cat wordlist | %s -e <essid> > <pmklist>\n"
 	"or use classic mode:\n"
-	"%s -e <essid> -i <wordlist -a <pmklist>\n"
+	"%s -e <essid> -i <wordlist> -a <pmklist>\n"
 	"or use mixed mode:\n"
-	"%s -e <essid> -i <wordlist > <pmklist>\n"
+	"%s -e <essid> -i <wordlist> > <pmklist>\n"
 	"\n", eigenname, VERSION, VERSION_JAHR, eigenname, eigenname, eigenname, eigenname, eigenname);
 exit(EXIT_FAILURE);
 }
