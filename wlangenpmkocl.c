@@ -994,7 +994,7 @@ while ((auswahl = getopt(argc, argv, "p:e:i:I:a:A:c:P:D:lh")) != -1)
 		}
 	}
 
-if((essidname != NULL) && (fhpwlist == NULL) && (fhascii == NULL) && (pwname == NULL) && (fhcombi == NULL))
+if((essidname != NULL) && (fhpwlist == NULL) && (fhascii == NULL) && (pwname == NULL) && (fhcombi == NULL) && (fhasciipw == NULL))
 	{
 	printf("running in stdin/stdout mode\n");
 	pipeflag = true;
@@ -1002,14 +1002,14 @@ if((essidname != NULL) && (fhpwlist == NULL) && (fhascii == NULL) && (pwname == 
 	fhpwlist = stdin;
 	}
 
-else if((essidname != NULL) && (fhpwlist != NULL) && (fhascii == NULL) && (pwname == NULL) && (fhcombi == NULL))
+else if((essidname != NULL) && (fhpwlist != NULL) && (fhascii == NULL) && (pwname == NULL) && (fhcombi == NULL) && (fhasciipw == NULL))
 	{
 	printf("running in stdout mode\n");
 	pipeflag = true;
 	fhascii = stdout;
 	}
 
-else if((essidname != NULL) && (fhpwlist == NULL) && (fhascii != NULL) && (pwname == NULL) && (fhcombi == NULL))
+else if((essidname != NULL) && (fhpwlist == NULL) && (fhascii != NULL) && (pwname == NULL) && (fhcombi == NULL) && (fhasciipw == NULL))
 	{
 	printf("running in stdin mode\n");
 	pipeflag = true;
