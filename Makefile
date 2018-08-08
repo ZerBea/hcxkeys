@@ -1,4 +1,5 @@
-INSTALLDIR	= /usr/local/bin
+PREFIX		?=/usr/local
+INSTALLDIR	= $(DESTDIR)$(PREFIX)/bin
 
 HOSTOS := $(shell uname -s)
 CC	= gcc
