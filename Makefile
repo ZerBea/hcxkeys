@@ -1,8 +1,10 @@
-INSTALLDIR	= /usr/local/bin
+PREFIX		?=/usr/local
+INSTALLDIR	= $(DESTDIR)$(PREFIX)/bin
 
 HOSTOS := $(shell uname -s)
 CC	= gcc
-CFLAGS	= -std=gnu99 -O3 -Wall -Wextra
+CFLAGS	?= -O3 -Wall -Wextra
+CFLAGS	+= -std=gnu99
 INSTFLAGS = -m 0755
 
 ifeq ($(HOSTOS), Linux)
@@ -16,13 +18,13 @@ endif
 all: build
 
 build:
-	$(CC) $(CFLAGS) -o wlangenpmk wlangenpmk.c -lcrypto
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o wlangenpmk wlangenpmk.c -lcrypto $(LDFLAGS)
 ifeq ($(HOSTOS), Darwin)
-	$(CC) $(CFLAGS) -o wlangenpmkocl wlangenpmkocl.c -lcrypto -Wl,-framework,OpenCL -lm
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o wlangenpmkocl wlangenpmkocl.c -lcrypto -Wl,-framework,OpenCL -lm $(LDFLAGS)
 else
-	$(CC) $(CFLAGS) -o wlangenpmkocl wlangenpmkocl.c -lcrypto -lOpenCL
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o wlangenpmkocl wlangenpmkocl.c -lcrypto -lOpenCL $(LDFLAGS)
 endif
-	$(CC) $(CFLAGS) -o pwhash pwhash.c -lcrypto
+	$(CC) $(CFLAGS) $(CPPFLAGS) -o pwhash pwhash.c -lcrypto $(LDFLAGS)
 
 
 install: build
