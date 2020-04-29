@@ -16,7 +16,7 @@
 #include <stdio_ext.h>
 #endif
 #include <openssl/evp.h>
-#include "common.h"
+#include "include/common.h"
 
 #define COWPATTY_SIGNATURE 0x43575041L
 
@@ -330,7 +330,7 @@ printf("%s %s (C) %s ZeroBeat\n"
 	"-A <file>     : output plainmasterkeys:password as ASCII file\n"
 	"-c <file>     : output cowpatty hashfile (existing file will be replaced)\n"
 	"-h            : this help\n"
-	"\n", eigenname, VERSION, VERSION_JAHR, eigenname);
+	"\n", eigenname, VERSION_TAG, VERSION_YEAR, eigenname);
 exit(EXIT_FAILURE);
 }
 /*===========================================================================*/
@@ -373,7 +373,7 @@ while ((auswahl = getopt(argc, argv, "p:e:i:I:a:A:c:h")) != -1)
 		case 'p':
 		pwname = optarg;
 		pwlen = strlen(pwname);
-		if((pwlen < 8) || (pwlen > 63))
+		if((pwlen < 1) || (pwlen > 63))
 			{
 			fprintf(stderr, "error wrong password len\n");
 			exit(EXIT_FAILURE);

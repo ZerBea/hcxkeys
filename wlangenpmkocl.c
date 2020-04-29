@@ -25,8 +25,8 @@
 #else
 #include <CL/cl.h>
 #endif
-#include "common.h"
-#include "common.c"
+#include "include/common.h"
+#include "include/common.c"
 
 
 #define MAX_SOURCE_SIZE (0x1000000)
@@ -885,7 +885,7 @@ printf("%s %s (C) %s ZeroBeat\n"
 	"%s -e <essid> -i <wordlist> -a <pmklist>\n"
 	"or use mixed mode:\n"
 	"%s -e <essid> -i <wordlist> > <pmklist>\n"
-	"\n", eigenname, VERSION, VERSION_JAHR, eigenname, eigenname, eigenname, eigenname, eigenname);
+	"\n", eigenname, VERSION_TAG, VERSION_YEAR, eigenname, eigenname, eigenname, eigenname, eigenname);
 exit(EXIT_FAILURE);
 }
 /*===========================================================================*/

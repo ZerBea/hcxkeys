@@ -1,6 +1,3 @@
-#define VERSION "4.0.1"
-#define VERSION_JAHR "2019"
-
 #if !defined(FALSE)
 #define FALSE 0
 #endif
