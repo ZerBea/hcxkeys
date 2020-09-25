@@ -1016,6 +1016,13 @@ else if((essidname != NULL) && (fhpwlist == NULL) && (fhascii != NULL) && (pwnam
 	fhpwlist = stdin;
 	}
 
+else if((essidname != NULL) && (fhpwlist == NULL) && (fhascii == NULL) && (pwname == NULL) && (fhcombi == NULL) && (fhasciipw != NULL))
+	{
+	printf("running in stdin mode\n");
+	pipeflag = true;
+	fhpwlist = stdin;
+	}
+
 if(listdeviceinfo == true)
 	{
 	if(listdevices() != true)
