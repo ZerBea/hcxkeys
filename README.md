@@ -41,6 +41,8 @@ Requirements
 
 * Linux (recommended Arch, but other distros should work, too)
 
+* gcc 10 recommended (deprecated versions are not supported: https://gcc.gnu.org/)
+
 * OpenCL and OpenCL Headers installed
 
 * libopenssl and openssl-dev installed
