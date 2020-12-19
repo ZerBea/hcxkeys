@@ -29,7 +29,6 @@
 #include "include/common.h"
 #include "include/common.c"
 
-
 #define MAX_SOURCE_SIZE (0x1000000)
 typedef struct
 {
@@ -757,6 +756,7 @@ if(pipeflag == false)
 free(devicename);
 
 context = clCreateContext( NULL, 1, &devices[gdevc], NULL, NULL, &ret);
+
 
 command_queue = clCreateCommandQueue(context, devices[gdevc], CL_QUEUE_PROFILING_ENABLE, &ret);
 program = clCreateProgramWithSource(context, 1, (const char **) &kerneldata, NULL, &ret);
