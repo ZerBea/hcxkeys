@@ -49,7 +49,6 @@ typedef struct
  SHA_DEV_CTX pmk2;
 } gpu_outbuffer;
 
-
 #define COWPATTY_SIGNATURE 0x43575041L
 struct cow_head
 {
