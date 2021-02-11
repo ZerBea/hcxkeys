@@ -14,7 +14,7 @@ INSTALLDIR	= $(DESTDIR)$(PREFIX)/bin
 
 HOSTOS := $(shell uname -s)
 CC	= gcc
-CFLAGS	?= -O3 -Wall -Wextra -Wno-deprecated -Wno-deprecated-declarations
+CFLAGS	?= -O3 -Wall -Wextra
 CFLAGS	+= -std=gnu99
 DEFS	= -DVERSION_TAG=\"$(VERSION_TAG)\" -DVERSION_YEAR=\"$(VERSION_YEAR)\"
 INSTFLAGS = -m 0755
