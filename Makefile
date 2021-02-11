@@ -36,13 +36,11 @@ ifeq ($(HOSTOS), Darwin)
 else
 	$(CC) $(CFLAGS) $(CPPFLAGS) $(DEFS) -o wlangenpmkocl wlangenpmkocl.c -lcrypto -lOpenCL $(LDFLAGS)
 endif
-	$(CC) $(CFLAGS) $(CPPFLAGS) $(DEFS) -o pwhash pwhash.c -lcrypto $(LDFLAGS)
 
 
 install: build
 	install $(INSTFLAGS) wlangenpmk $(INSTALLDIR)/wlangenpmk
 	install $(INSTFLAGS) wlangenpmkocl $(INSTALLDIR)/wlangenpmkocl
-	install $(INSTFLAGS) pwhash $(INSTALLDIR)/pwhash
 	rm -f wlangenpmk
 	rm -f wlangenpmkocl
 	rm -f pwhash
@@ -52,11 +50,9 @@ install: build
 clean:
 	rm -f wlangenpmk
 	rm -f wlangenpmkocl
-	rm -f pwhash
 	rm -f *.o *~
 
 
 uninstall:
 	rm -f $(INSTALLDIR)/wlangenpmk
 	rm -f $(INSTALLDIR)/wlangenpmkocl
-	rm -f $(INSTALLDIR)/pwhash

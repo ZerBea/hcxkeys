@@ -1,3 +1,8 @@
+11.02.2021
+==========
+removed pwhash because all functions are provided by openssl
+
+
 01.05.2020
 ==========
 added changelog
