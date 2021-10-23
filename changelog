@@ -1,3 +1,13 @@
+23.10.2021
+==========
+added generic hcxkeys.1 man page 
+
+
+20.10.2021
+==========
+moved install dir from /usr/local/bin to /usr/bin
+
+
 17.05.2021
 ==========
 release v6.2.0

@@ -1,8 +1,7 @@
 hcxkeys
 ==============
 
-Small set of tools to generate plainmasterkeys (rainbowtables) and hashes
-for the use with latest hashcat and latest John the Ripper.
+Small set of tools to generate plainmasterkeys (rainbowtables) for the use with latest hashcat and latest John the Ripper.
 
 
 Brief description
@@ -20,9 +19,8 @@ Detailed description
 
 | Tool           | Description                                                                                          |
 | -------------- | ---------------------------------------------------------------------------------------------------- |
-| wlangenpmk     | Generates plainmasterkeys (CPU) from essid and password for use with hashcat hash-mode 2501          |
-| wlangenpmkocl  | Generates plainmasterkeys (GPU) from essid and password for use with hashcat hash-mode 2501          |
-| pwhash         | Generate hash of a word by using a given charset                                                     |
+| wlangenpmk     | Generates plainmasterkeys (CPU) from essid and password for use with hashcat hash-mode 22001         |
+| wlangenpmkocl  | Generates plainmasterkeys (GPU) from essid and password for use with hashcat hash-mode 22001         |
 
 
 Compile
@@ -41,7 +39,7 @@ Requirements
 
 * Linux (recommended Arch, but other distros should work, too)
 
-* gcc 10 recommended (deprecated versions are not supported: https://gcc.gnu.org/)
+* gcc >= 11 recommended (deprecated versions are not supported: https://gcc.gnu.org/)
 
 * OpenCL and OpenCL Headers installed
 
