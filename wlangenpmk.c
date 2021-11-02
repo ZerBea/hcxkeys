@@ -331,7 +331,7 @@ printf("%s %s (C) %s ZeroBeat\n"
 	"-c <file>     : output cowpatty hashfile (existing file will be replaced)\n"
 	"-h            : this help\n"
 	"\n", eigenname, VERSION_TAG, VERSION_YEAR, eigenname);
-exit(EXIT_FAILURE);
+exit(EXIT_SUCCESS);
 }
 /*===========================================================================*/
 int main(int argc, char *argv[])
