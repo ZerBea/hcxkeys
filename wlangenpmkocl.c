@@ -886,7 +886,7 @@ printf("%s %s (C) %s ZeroBeat\n"
 	"or use mixed mode:\n"
 	"%s -e <essid> -i <wordlist> > <pmklist>\n"
 	"\n", eigenname, VERSION_TAG, VERSION_YEAR, eigenname, eigenname, eigenname, eigenname, eigenname);
-exit(EXIT_FAILURE);
+exit(EXIT_SUCCESS);
 }
 /*===========================================================================*/
 int main(int argc, char *argv[])
