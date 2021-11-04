@@ -37,7 +37,7 @@ make install (as super user)
 Requirements
 --------------
 
-* knowledge of radiofrequency technology
+* knowledge of radio technology
 
 * knowledge of electromagnetic-wave engineering
 
@@ -45,7 +45,7 @@ Requirements
 
 * detailed knowledge of key derivation functions
 
-* detailed kowlege of Linux
+* detailed knowledge of Linux
 
 * Linux (recommended Arch, but other distros should work, too)
 
