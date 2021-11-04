@@ -37,6 +37,16 @@ make install (as super user)
 Requirements
 --------------
 
+* knowledge of radiofrequency technology
+
+* knowledge of electromagnetic-wave engineering
+
+* detailed knowledge of 802.11 protocol
+
+* detailed knowledge of key derivation functions
+
+* detailed kowlege of Linux
+
 * Linux (recommended Arch, but other distros should work, too)
 
 * gcc >= 11 recommended (deprecated versions are not supported: https://gcc.gnu.org/)
