@@ -1,3 +1,13 @@
+Important notice
+==============
+Calulating of PlainMaster Key rainbowtables is no longer up-to-date.
+At the end of 2022 I'm going to remove "hcxkeys" repository.
+
+
+
+
+
+
 hcxkeys
 ==============
 
