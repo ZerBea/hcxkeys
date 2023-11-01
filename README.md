@@ -1,11 +1,12 @@
 Important notice
 ==============
 Calulating of PlainMaster Key rainbowtables is no longer up-to-date.
-At the end of 2022 I'm going to remove "hcxkeys" repository.
-
-
-
-
+Future plan is to replace teh old by a Plain Master Key Data Base (PMKDB)
+- create PMKs by CPU and GPU and import them to the data base
+- import hashcat pot file to data base
+- import hashcat out file to data base
+- creat hashcat pot file from data base
+- add PMKDB support to all hcxtools
 
 
 hcxkeys
